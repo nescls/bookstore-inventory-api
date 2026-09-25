@@ -5,6 +5,8 @@
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\" && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
+    "lint": "prettier --check src test scripts package.json tsconfig.json tsconfig.build.json",
+    "format": "prettier --write src test scripts package.json tsconfig.json tsconfig.build.json",
     "start": "node dist/src/main.js",
     "dev": "tsx watch src/main.ts",
     "test": "tsx --test --test-concurrency=1 test/*.test.ts",
