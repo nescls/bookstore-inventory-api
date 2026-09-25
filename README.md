@@ -6,7 +6,7 @@ Status: repository and project skills initialized. Requirements interview pendin
 
 ## Agreed direction
 
-- TypeScript; framework requested as Next (confirmation pending).
+- TypeScript and NestJS.
 - TypeORM, PostgreSQL, and Zod.
 - Error dictionary supporting Spanish and English based on request language.
 - Roles and permissions remain a TODO until authentication/token validation is scoped.
@@ -17,7 +17,8 @@ Status: repository and project skills initialized. Requirements interview pendin
 Use Matt Pocock’s `grill-with-docs → to-spec → to-tickets → implement` workflow.
 Project skills are vendored in `.agents/skills/`; supporting skills are included.
 See `docs/skills-source.json` for the pinned upstream revision and license.
-Issue tracker and agent configuration are awaiting setup decisions.
+Specs and tickets will live in GitHub Issues for `nescls/bookstore-inventory-api`.
+Agent configuration is awaiting final setup review.
 
 ## Requirements
 

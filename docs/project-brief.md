@@ -45,7 +45,7 @@ TypeScript stack takes precedence.
 
 ## User additions and constraints
 
-- Use familiar technology: TypeScript, Next (confirm Next.js versus NestJS),
+- Use familiar technology: TypeScript, NestJS,
   TypeORM, PostgreSQL, Zod.
 - Central error dictionary with Spanish and English messages selected from
   request language. Language negotiation and default language remain undecided.
@@ -55,7 +55,7 @@ TypeScript stack takes precedence.
 
 ## Decisions to resolve in the interview
 
-- Framework confirmation; API-only scope versus any frontend.
+- API-only scope versus any frontend.
 - Local currency; configuration model for currency and fallback rate.
 - Decimal precision, rounding stage, and whether the example’s intermediate
   rounding is required (15.99 × 0.85 rounds to 13.59; 13.59 × 1.4 rounds to 19.03,
@@ -67,7 +67,13 @@ TypeScript stack takes precedence.
 - ISBN normalization/checksum rules, update semantics, and invalidated stored prices.
 - Optional endpoints and pagination scope.
 - Testing seams, deployment provider, managed database, and deployment budget.
-- GitHub versus local tracking, repository visibility, and agent instruction file.
+- Agent instruction file.
+
+## Confirmed setup decisions
+
+- Private GitHub repository: nescls/bookstore-inventory-api.
+- Specs and tickets live in GitHub Issues.
+- Framework: NestJS (not Next.js).
 
 ## Deferred
 
