@@ -2,12 +2,14 @@ import { Inject, Injectable } from "@nestjs/common";
 import { EntityManager } from "typeorm";
 import { ExchangeRatesService } from "../exchange-rates/exchange-rates.service";
 import { calculatePrice } from "./utils/calculate-price";
+
 @Injectable()
 export class PricingService {
   constructor(
     @Inject(ExchangeRatesService)
     private readonly exchangeRatesService: ExchangeRatesService,
   ) {}
+
   async calculate(cost: string, manager: EntityManager) {
     const rate = await this.exchangeRatesService.resolveRate(manager);
     return {

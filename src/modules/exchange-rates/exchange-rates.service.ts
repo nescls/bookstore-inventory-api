@@ -5,10 +5,13 @@ import { Logger } from "nestjs-pino";
 import { ExchangeRateEntity } from "./entities/exchange-rate.entity";
 import { isValidRate } from "./utils/is-valid-rate";
 import { fetchProviderRate, readProviderConfig } from "./utils/provider-rate";
+
 @Injectable()
 export class ExchangeRatesService {
   private readonly providerUrl: string;
+
   private readonly timeoutMs: number;
+
   constructor(
     @Inject(DataSource) private readonly dataSource: DataSource,
     @Inject(Logger) private readonly logger: Logger,
@@ -17,6 +20,7 @@ export class ExchangeRatesService {
     this.providerUrl = url;
     this.timeoutMs = timeoutMs;
   }
+
   async resolveRate(
     manager: EntityManager = this.dataSource.manager,
   ): Promise<string> {

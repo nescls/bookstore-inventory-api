@@ -1,6 +1,8 @@
 import Decimal from "decimal.js";
 import { ApiError } from "../../../common/errors/api-error";
+
 const MoneyDecimal = Decimal.clone({ precision: 50 });
+
 export function calculatePrice(cost: string, rate: string) {
   const costLocal = new MoneyDecimal(cost)
     .mul(rate)

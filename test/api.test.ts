@@ -1,19 +1,24 @@
 import "reflect-metadata";
+
 process.env.LOG_LEVEL = "silent";
+
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+
 let providerCalls = 0;
 let providerStatus = 200;
 let providerDelay = 0;
 let providerBody: unknown = { base: "USD", rates: { EUR: 0.85 } };
+
 const provider = createServer((_req, res) => {
   providerCalls++;
   res.writeHead(providerStatus, { "Content-Type": "application/json" });
   setTimeout(() => res.end(JSON.stringify(providerBody)), providerDelay);
 });
+
 import { seed } from "../scripts/seed";
 import { createApp } from "../src/app";
 import {
@@ -23,17 +28,21 @@ import {
   priceCalculationResponseSchema,
 } from "../src/modules/books/dto/books.responses";
 import { createDatabase } from "../src/database/data-source";
+
 const dataSource = createDatabase(
   process.env.TEST_DATABASE_URL ??
     "postgres://bookstore:bookstore@localhost:55433/bookstore_test",
 );
+
 if (
   !new URL(
     dataSource.options.type === "postgres" ? dataSource.options.url! : "",
   ).pathname.endsWith("_test")
 )
   throw new Error("Test database name must end in _test");
+
 let app: Awaited<ReturnType<typeof createApp>>;
+
 const sample = {
   title: "Don Quijote",
   author: "Miguel de Cervantes",
@@ -43,6 +52,7 @@ const sample = {
   category: "Literatura",
   supplier_country: "ES",
 };
+
 before(async () => {
   await new Promise<void>((r) => provider.listen(0, "127.0.0.1", r));
   process.env.EXCHANGE_RATE_URL = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`;
@@ -51,6 +61,7 @@ before(async () => {
   app = await createApp(dataSource);
   await app.init();
 });
+
 beforeEach(async () => {
   await dataSource.query(
     "TRUNCATE books, exchange_rates RESTART IDENTITY CASCADE",
@@ -61,11 +72,13 @@ beforeEach(async () => {
   process.env.EXCHANGE_RATE_TIMEOUT_MS = "5000";
   providerBody = { base: "USD", rates: { EUR: 0.85 } };
 });
+
 after(async () => {
   await new Promise<void>((r, j) => provider.close((e) => (e ? j(e) : r())));
   await app?.close();
   if (dataSource.isInitialized) await dataSource.destroy();
 });
+
 test("create a book and retrieve its saved canonical record", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -119,6 +132,7 @@ test("rejects equivalent duplicate ISBN and invalid inputs with localized dictio
     process.env.NODE_ENV = original;
   }
 });
+
 test("lists books with shared pagination, case-insensitive category, and strict low-stock threshold", async () => {
   await request(app.getHttpServer()).post("/books").send(sample).expect(201);
   await request(app.getHttpServer())
@@ -162,6 +176,7 @@ test("lists books with shared pagination, case-insensitive category, and strict 
   ])
     await request(app.getHttpServer()).get(path).expect(400);
 });
+
 test("permanent deletion removes the book and repeated deletion is a localized 404", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -199,6 +214,7 @@ test("calculates and persists the suggested price in EUR", async () => {
   );
   assert.equal(providerCalls, 1);
 });
+
 test("uses the latest stored rate on provider failure without exposing provenance", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -226,6 +242,7 @@ test("uses the latest stored rate on provider failure without exposing provenanc
     ].sort(),
   );
 });
+
 test("missing usable live or stored rate returns a clear dictionary 503 and preserves the book", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -249,6 +266,7 @@ test("missing usable live or stored rate returns a clear dictionary 503 and pres
     .expect(200);
   assert.equal(found.body.selling_price_local, null);
 });
+
 test("partial edits recalculate only a changed cost and save all fields together", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -297,6 +315,7 @@ test("failed cost recalculation leaves all book fields unchanged", async () => {
     .expect(200);
   assert.deepEqual(found.body, created.body);
 });
+
 test("seeding only inserts missing records and preserves edited books and existing rates", async () => {
   await seed(dataSource, "2");
   const first = await request(app.getHttpServer()).get("/books").expect(200);
@@ -315,6 +334,7 @@ test("seeding only inserts missing records and preserves edited books and existi
     .expect(200);
   assert.equal(price.body.exchange_rate, 0.85);
 });
+
 test("a changed-cost edit issues one book UPDATE", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
@@ -346,6 +366,7 @@ test("a changed-cost edit issues one book UPDATE", async () => {
     await dataSource.query("DROP TABLE test_book_updates");
   }
 });
+
 test("category wildcard characters are treated literally and duplicate updates preserve the original", async () => {
   const a = await request(app.getHttpServer())
     .post("/books")
@@ -369,6 +390,7 @@ test("category wildcard characters are treated literally and duplicate updates p
     b.body,
   );
 });
+
 test("offline seed supplies the first rate, repeated seeds preserve it, and missing initialization fails", async () => {
   providerStatus = 503;
   await assert.rejects(seed(dataSource, ""), /No initial exchange rate/);
@@ -418,6 +440,7 @@ test("provider timeout falls back to an old stored rate", async () => {
     await timeoutApp.close();
   }
 });
+
 test("simultaneous edits preserve unrelated fields and leave a consistent price", async () => {
   const book = (await request(app.getHttpServer()).post("/books").send(sample))
     .body;
@@ -437,6 +460,7 @@ test("simultaneous edits preserve unrelated fields and leave a consistent price"
   assert.equal(saved.cost_usd, 20);
   assert.equal(saved.selling_price_local, 23.8);
 });
+
 test("oversized calculated amounts fail without changing the cost or price", async () => {
   const book = (
     await request(app.getHttpServer()).post("/books").send(sample).expect(201)
@@ -452,6 +476,7 @@ test("oversized calculated amounts fail without changing the cost or price", asy
     book,
   );
 });
+
 test("malformed JSON uses the localized error envelope", async () => {
   const failed = await request(app.getHttpServer())
     .post("/books")

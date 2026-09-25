@@ -10,6 +10,7 @@ import { isValidRate } from "../src/modules/exchange-rates/utils/is-valid-rate";
 import { createBookSchema } from "../src/modules/books/dto/books.schemas";
 import { requireCanonicalIsbn } from "../src/modules/books/utils/isbn";
 import { parse } from "../src/common/utils/parse";
+
 const sampleBooks = [
   {
     title: "A Brief History of Time",
@@ -30,6 +31,7 @@ const sampleBooks = [
     supplier_country: "ES",
   },
 ];
+
 export async function seed(
   dataSource: DataSource,
   offlineRate = process.env.SEED_EXCHANGE_RATE,
@@ -78,6 +80,7 @@ export async function seed(
     }
   });
 }
+
 async function main() {
   const dataSource = createDatabase();
   try {
@@ -88,6 +91,7 @@ async function main() {
     if (dataSource.isInitialized) await dataSource.destroy();
   }
 }
+
 if (require.main === module)
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : "Seed failed");

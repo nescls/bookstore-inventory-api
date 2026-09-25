@@ -1,4 +1,5 @@
 import type { ErrorCode } from "./error-messages";
+
 export class ApiError extends Error {
   constructor(
     public code: ErrorCode,

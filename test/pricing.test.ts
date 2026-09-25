@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { calculatePrice } from "../src/modules/pricing/utils/calculate-price";
 import { resolveLanguage } from "../src/common/utils/resolve-language";
+
 test("two-stage half-up rounding matches the assessment example", () => {
   assert.deepEqual(calculatePrice("15.99", "0.85"), {
     cost_local: 13.59,
@@ -12,6 +13,7 @@ test("two-stage half-up rounding matches the assessment example", () => {
     selling_price_local: "1.41",
   });
 });
+
 test("language preferences support regions, weights, exclusions, and Spanish fallback", () => {
   assert.equal(resolveLanguage("en-US"), "en");
   assert.equal(resolveLanguage("es-VE"), "es");
@@ -20,6 +22,7 @@ test("language preferences support regions, weights, exclusions, and Spanish fal
   assert.equal(resolveLanguage("de"), "es");
   assert.equal(resolveLanguage(undefined), "es");
 });
+
 test("rejects calculated amounts that cannot round-trip through the JSON number contract", () => {
   assert.throws(() => calculatePrice("999999999999.99", "12345678.123456789"), {
     code: "amountOutOfRange",

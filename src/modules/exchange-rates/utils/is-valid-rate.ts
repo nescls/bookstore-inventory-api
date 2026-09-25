@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+
 export function isValidRate(value: unknown): value is number {
   return (
     typeof value === "number" &&

@@ -7,16 +7,19 @@ import { CreateBookInput, UpdateBookInput } from "./dto/books.schemas";
 import { PricingService } from "../pricing/pricing.service";
 import { ApiError } from "../../common/errors/api-error";
 import { requireCanonicalIsbn } from "./utils/isbn";
+
 export interface BookFilters {
   category?: string;
   threshold?: number;
 }
+
 @Injectable()
 export class BooksService {
   constructor(
     @Inject(DataSource) private readonly dataSource: DataSource,
     @Inject(PricingService) private readonly pricingService: PricingService,
   ) {}
+
   async create(input: CreateBookInput) {
     const bookRepository = this.dataSource.getRepository(BookEntity);
     return serializeBook(
@@ -30,6 +33,7 @@ export class BooksService {
       ),
     );
   }
+
   async paginate(page: number, limit: number, filters: BookFilters = {}) {
     const where: FindOptionsWhere<Book> = {};
     if (filters.category !== undefined) {
@@ -54,6 +58,7 @@ export class BooksService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
   async update(id: number, input: UpdateBookInput) {
     return this.dataSource.transaction(async (manager) => {
       const bookRepository = manager.getRepository(BookEntity);
@@ -80,6 +85,7 @@ export class BooksService {
       );
     });
   }
+
   async calculatePrice(id: number) {
     return this.dataSource.transaction(async (manager) => {
       const bookRepository = manager.getRepository(BookEntity);
@@ -99,12 +105,14 @@ export class BooksService {
       };
     });
   }
+
   async delete(id: number) {
     const result = await this.dataSource
       .getRepository(BookEntity)
       .delete({ id });
     if (!result.affected) throw new ApiError("bookNotFound", 404);
   }
+
   async find(id: number) {
     const book = await this.dataSource
       .getRepository(BookEntity)

@@ -1,4 +1,5 @@
 import { EntitySchema } from "typeorm";
+
 export interface Book {
   id: number;
   title: string;
@@ -15,6 +16,7 @@ export interface Book {
   isActive: boolean;
   deletedBy: string | null;
 }
+
 export const BookEntity = new EntitySchema<Book>({
   name: "Book",
   tableName: "books",

@@ -8,6 +8,7 @@ import { join } from "node:path";
 const databaseUrl =
   process.env.TEST_DATABASE_URL ??
   "postgres://bookstore:bookstore@localhost:55433/bookstore_test";
+
 const port = 3900 + (process.pid % 90);
 
 // nestjs-pino keeps one root logger per process, so the real entrypoint runs in a child.

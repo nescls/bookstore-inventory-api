@@ -52,3 +52,6 @@ selling_price_local, currency, calculation_timestamp`.
   code linting is Biome (`npm run lint:code`; `npm run lint` is the Prettier check used in CI) and the OpenAPI document is built from Zod.
 - `nestjs-pino` keeps one root logger per process; test logging in a child process.
 - Format with Prettier (`npm run format`).
+- Leave a blank line between top-level declarations and between class members (methods, decorated
+  members). Prettier and Biome do not add these lines and no lint rule enforces them under TypeScript 7,
+  so keep them by hand.

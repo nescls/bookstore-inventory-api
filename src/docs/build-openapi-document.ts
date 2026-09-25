@@ -34,9 +34,11 @@ function toJsonSchema(
 }
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+
 const jsonContent = (name: string, example?: unknown) => ({
   "application/json": { schema: ref(name), ...(example ? { example } : {}) },
 });
+
 const errorResponse = (description: string, code: string) => ({
   description,
   content: {
@@ -49,10 +51,12 @@ const errorResponse = (description: string, code: string) => ({
     },
   },
 });
+
 const badRequest = errorResponse(
   "Invalid input (see `error.code` and `error.details`).",
   "invalidField",
 );
+
 const notFound = errorResponse("Book not found.", "bookNotFound");
 const serverError = errorResponse("Unexpected server error.", "internalError");
 
@@ -62,6 +66,7 @@ const idParameter = {
   required: true,
   schema: { type: "integer", minimum: 1, maximum: 2147483647 },
 };
+
 const pageParameters = [
   {
     name: "page",
