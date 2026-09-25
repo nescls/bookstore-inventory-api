@@ -3,7 +3,9 @@ import Decimal from "decimal.js";
 import validator from "validator";
 import { canonicalIsbn } from "../utils/isbn";
 import { parse } from "../../../common/utils/parse";
+
 const requiredText = (max: number) => z.string().trim().min(1).max(max);
+
 export const createBookSchema = z.strictObject({
   title: requiredText(300),
   author: requiredText(200),
@@ -31,26 +33,33 @@ export const createBookSchema = z.strictObject({
     .toUpperCase()
     .refine((country) => validator.isISO31661Alpha2(country)),
 });
+
 export const parseBookId = (id: string) =>
   parse(z.coerce.number().int().positive().max(2147483647), id);
+
 const queryInteger = z
   .string()
   .regex(/^\d+$/)
   .transform(Number)
   .pipe(z.number().int().min(0).max(2147483647));
+
 const pagination = {
   page: queryInteger.pipe(z.number().positive()).default(1),
   limit: queryInteger.pipe(z.number().min(1).max(100)).default(20),
 };
+
 export const listSchema = z.strictObject(pagination);
+
 export const searchSchema = z.strictObject({
   ...pagination,
   category: requiredText(100),
 });
+
 export const lowStockSchema = z.strictObject({
   ...pagination,
   threshold: queryInteger.default(10),
 });
+
 export const updateBookSchema = createBookSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0);

@@ -4,9 +4,11 @@ import { ApiError } from "../errors/api-error";
 import { errorMessages } from "../errors/error-messages";
 import { Logger } from "nestjs-pino";
 import { resolveLanguage } from "../utils/resolve-language";
+
 @Catch()
 export class ErrorFilter implements ExceptionFilter {
   constructor(private readonly logger: Logger) {}
+
   catch(error: unknown, host: ArgumentsHost) {
     const request = host.switchToHttp().getRequest<Request>();
     const response = host.switchToHttp().getResponse<Response>();

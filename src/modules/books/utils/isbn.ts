@@ -1,4 +1,5 @@
 import validator from "validator";
+
 export function canonicalIsbn(input: string) {
   const isbn = input.replace(/[\s-]/g, "").toUpperCase();
   if (!validator.isISBN(isbn)) return null;
@@ -11,6 +12,7 @@ export function canonicalIsbn(input: string) {
   );
   return isbn13Prefix + ((10 - (weightedSum % 10)) % 10);
 }
+
 export function requireCanonicalIsbn(isbn: string) {
   const canonical = canonicalIsbn(isbn);
   if (!canonical) throw new Error("ISBN must be validated first");

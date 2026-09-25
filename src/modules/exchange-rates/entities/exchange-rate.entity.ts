@@ -1,4 +1,5 @@
 import { EntitySchema } from "typeorm";
+
 export interface ExchangeRate {
   id: number;
   base: string;
@@ -6,6 +7,7 @@ export interface ExchangeRate {
   rate: string;
   created_at: Date;
 }
+
 export const ExchangeRateEntity = new EntitySchema<ExchangeRate>({
   name: "ExchangeRate",
   tableName: "exchange_rates",

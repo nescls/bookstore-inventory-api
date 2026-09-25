@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
+
 export class IsbnAsEntered1790294400002 implements MigrationInterface {
   async up(queryRunner: QueryRunner) {
     await queryRunner.query(`ALTER TABLE books
@@ -10,6 +11,7 @@ export class IsbnAsEntered1790294400002 implements MigrationInterface {
  DROP CONSTRAINT books_isbn_key,
  ADD CONSTRAINT books_isbn_canonical_key UNIQUE (isbn_canonical)`);
   }
+
   async down(queryRunner: QueryRunner) {
     await queryRunner.query(`ALTER TABLE books
  DROP CONSTRAINT books_isbn_canonical_key,

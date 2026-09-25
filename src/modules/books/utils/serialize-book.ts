@@ -1,4 +1,5 @@
 import { Book } from "../entities/book.entity";
+
 export function serializeBook({ isbn_canonical, ...book }: Book) {
   return {
     ...book,

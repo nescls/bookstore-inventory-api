@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "../errors/api-error";
+
 export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (result.success) return result.data;

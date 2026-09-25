@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
+
 export class InitialBooks1790294400000 implements MigrationInterface {
   async up(queryRunner: QueryRunner) {
     await queryRunner.query(`CREATE TABLE books (
@@ -10,6 +11,7 @@ export class InitialBooks1790294400000 implements MigrationInterface {
  updated_at timestamptz NOT NULL DEFAULT now(), "isActive" boolean NOT NULL DEFAULT true, "deletedBy" varchar
  )`);
   }
+
   async down(queryRunner: QueryRunner) {
     await queryRunner.query("DROP TABLE books");
   }

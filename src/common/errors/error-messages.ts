@@ -27,4 +27,5 @@ export const errorMessages = {
   },
   routeNotFound: { es: "Ruta no encontrada.", en: "Route not found." },
 } as const;
+
 export type ErrorCode = keyof typeof errorMessages;

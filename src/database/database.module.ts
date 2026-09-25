@@ -6,10 +6,12 @@ import {
   OnApplicationShutdown,
 } from "@nestjs/common";
 import { DataSource } from "typeorm";
+
 @Global()
 @Module({})
 export class DatabaseModule implements OnApplicationShutdown {
   constructor(@Inject(DataSource) private readonly dataSource: DataSource) {}
+
   static register(dataSource: DataSource): DynamicModule {
     return {
       module: DatabaseModule,
@@ -17,6 +19,7 @@ export class DatabaseModule implements OnApplicationShutdown {
       exports: [DataSource],
     };
   }
+
   async onApplicationShutdown() {
     if (this.dataSource.isInitialized) await this.dataSource.destroy();
   }
