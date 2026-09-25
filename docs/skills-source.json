@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/mattpocock/skills",
+  "revision": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+  "scope": "project",
+  "location": ".agents/skills",
+  "workflow": [
+    "grill-with-docs",
+    "to-spec",
+    "to-tickets",
+    "implement"
+  ],
+  "installed": [
+    "code-review",
+    "codebase-design",
+    "domain-modeling",
+    "grill-with-docs",
+    "grilling",
+    "implement",
+    "setup-matt-pocock-skills",
+    "tdd",
+    "to-spec",
+    "to-tickets",
+    "writing-for-agents"
+  ],
+  "license": ".agents/skills/LICENSE.mattpocock"
+}
