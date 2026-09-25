@@ -2,6 +2,8 @@
 
 GitHub issue: https://github.com/nescls/bookstore-inventory-api/issues/2 · Status: closed
 
+> **Update (PRs #10–#12):** the ISBN is now stored and returned **as submitted** (trimmed); uniqueness is enforced on an internal canonical ISBN-13, so equivalent ISBNs are still duplicates. Local currency is **EUR** (USD→EUR rate).
+
 ## Parent
 
 https://github.com/nescls/bookstore-inventory-api/issues/1

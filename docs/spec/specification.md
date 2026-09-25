@@ -1,15 +1,12 @@
-# Spec: Bookstore inventory API with VES pricing and localized errors
+# Spec: Bookstore inventory API with EUR pricing and localized errors
 
 GitHub issue: https://github.com/nescls/bookstore-inventory-api/issues/1 · Status: open
 
-> **Later changes (see PRs #10 and #11):** local currency is now **EUR** (USD→EUR rate), not VES; the ISBN is
-> stored and returned **as submitted** (uniqueness uses an internal canonical ISBN-13); logging uses pino
-> (local `logs/app.log` or Google Cloud Logging); Swagger UI is served at `/docs`. The text below is the
-> original specification and is kept as written.
+> **Update (PRs #10–#12):** the ISBN is now stored and returned **as submitted** (trimmed); uniqueness is enforced on an internal canonical ISBN-13, so equivalent ISBNs are still duplicates. Local currency is **EUR** (USD→EUR rate).
 
 ## Problem Statement
 
-A bookstore needs a REST API to manage book inventory and calculate suggested selling prices in Venezuelan bolívares from acquisition costs in USD. It must remain usable when the exchange-rate provider fails, validate inputs consistently, and return understandable Spanish or English errors. Evaluators need reproducible local execution and a publicly deployed API backed by managed PostgreSQL.
+A bookstore needs a REST API to manage book inventory and calculate suggested selling prices in euros from acquisition costs in USD. It must remain usable when the exchange-rate provider fails, validate inputs consistently, and return understandable Spanish or English errors. Evaluators need reproducible local execution and a publicly deployed API backed by managed PostgreSQL.
 
 ## Solution
 
@@ -30,7 +27,7 @@ Build an API-only application using TypeScript, NestJS, TypeORM, PostgreSQL, and
 11. As an inventory operator, I want an unchanged USD cost to avoid recalculation, so that unrelated edits do not unexpectedly reprice a book.
 12. As an inventory operator, I want the new cost and price saved together, so that no intermediate inconsistent book is persisted.
 13. As an inventory operator, I want to permanently delete a book, so that it can be removed from inventory.
-14. As an inventory operator, I want to explicitly calculate and save a suggested selling price in VES, so that I can price imported books.
+14. As an inventory operator, I want to explicitly calculate and save a suggested selling price in EUR, so that I can price imported books.
 15. As an API consumer, I want the detailed calculation returned, so that I can inspect the cost, numerical rate, markup, and final amount.
 16. As an inventory operator, I want the latest stored exchange rate used when the provider fails, so that calculations can continue.
 17. As an API consumer, I want a consistent calculation response without live-versus-fallback indicators, so that provider selection remains internal.
@@ -54,7 +51,7 @@ Build an API-only application using TypeScript, NestJS, TypeORM, PostgreSQL, and
 - One inventory record per book edition/ISBN and one stock quantity; no branch inventory or frontend.
 - Modules cover books, exchange-rate retrieval/storage, shared price calculation, input validation, localized errors, and seeding. Keep interfaces small and avoid speculative abstractions.
 - Book fields match the assessment: id, title, author, isbn, cost_usd, nullable selling_price_local, stock_quantity, category, supplier_country, created_at, updated_at. Add isActive defaulting to true and nullable deletedBy as preparation for future soft deletion. These audit fields are server-managed; no client-controlled actor identity.
-- Persist USD-to-VES rates independently, with an identifier, currency pair, positive numerical rate, and creation timestamp sufficient to select the latest record deterministically. Keep source diagnostics internal.
+- Persist USD-to-EUR rates independently, with an identifier, currency pair, positive numerical rate, and creation timestamp sufficient to select the latest record deterministically. Keep source diagnostics internal.
 - Use PostgreSQL migrations and database constraints, including canonical ISBN uniqueness, alongside Zod input validation.
 
 ### Inventory contracts
@@ -76,18 +73,18 @@ Build an API-only application using TypeScript, NestJS, TypeORM, PostgreSQL, and
 
 ### Exchange-rate resolution and seeding
 
-- For each required calculation, try the external USD exchange-rate provider first and select the VES rate. Validate the provider response before treating it as usable; persist valid successful rates.
-- If the provider times out, fails, or returns no valid USD-to-VES rate, retrieve the most recently created stored USD-to-VES rate. No age cutoff applies in v1.
+- For each required calculation, try the external USD exchange-rate provider first and select the EUR rate. Validate the provider response before treating it as usable; persist valid successful rates.
+- If the provider times out, fails, or returns no valid USD-to-EUR rate, retrieve the most recently created stored USD-to-EUR rate. No age cutoff applies in v1.
 - Validate absence in the stored-rate lookup itself. If there is no usable live or stored rate, raise exchangeRateUnavailable with HTTP 503 and the dictionary message: Spanish, “No hay una tasa de cambio disponible.”; English, “No exchange rate is available.”
 - Return the numerical rate used in the assessment's calculation response. Omit rate-source labels, fallback flags, source-specific public headers, and equivalent provenance indicators. Detailed provenance may be logged internally.
 - Seed sample books with valid ISBNs and an initial rate. Insert missing sample books only; never overwrite existing records. Insert the initial rate only when the pair has no stored rate. Repeated seed execution does not duplicate data or add a new seed rate that supersedes a live one.
-- Obtain an initial rate from the provider, with an explicitly supplied seed rate for offline use. Clearly fail seed initialization if neither is available; do not fabricate a current VES rate.
+- Obtain an initial rate from the provider, with an explicitly supplied seed rate for offline use. Clearly fail seed initialization if neither is available; do not fabricate a current EUR rate.
 
 ### Price calculation and edits
 
-- Use decimal arithmetic: USD cost multiplied by the USD-to-VES rate gives local cost; round local cost to two decimals, apply a 40% markup on that rounded value, and round the final suggested selling price to two decimals.
-- This is markup on cost, not a 40% margin on revenue. The assessment's sample produces 13.59 local cost and 19.03 selling price from cost 15.99 and rate 0.85; retain this as an arithmetic example, not a VES-rate claim.
-- The shared calculation function computes and returns values without persisting the book. The explicit calculate-price endpoint saves selling_price_local and returns book_id, cost_usd, exchange_rate, cost_local, margin_percentage, selling_price_local, currency (VES), and calculation_timestamp.
+- Use decimal arithmetic: USD cost multiplied by the USD-to-EUR rate gives local cost; round local cost to two decimals, apply a 40% markup on that rounded value, and round the final suggested selling price to two decimals.
+- This is markup on cost, not a 40% margin on revenue. The assessment's sample produces 13.59 local cost and 19.03 selling price from cost 15.99 and rate 0.85; retain this as an arithmetic example, not a EUR-rate claim.
+- The shared calculation function computes and returns values without persisting the book. The explicit calculate-price endpoint saves selling_price_local and returns book_id, cost_usd, exchange_rate, cost_local, margin_percentage, selling_price_local, currency (EUR), and calculation_timestamp.
 - During an edit, compare a supplied cost_usd with the stored cost by numerical decimal equality. If omitted or numerically equal, skip recalculation. If different, call the shared calculation function first, then persist all edited fields and the calculated selling price in one book update.
 - If rate resolution or calculation fails, leave every book field unchanged. Do not persist the new cost and then perform a second book update for the price.
 - Updating exchange-rate records alone does not recalculate all books. Saved prices are refreshed by explicit calculation or an actual cost change.
@@ -119,7 +116,7 @@ The user already approved the primary test boundary: HTTP integration tests agai
 
 - Assert observable behavior and persisted state rather than private method names or implementation structure. Use real PostgreSQL constraints and migrations, not SQLite or mocked repositories for integration coverage.
 - Cover creation, canonical ISBN duplicates (including ISBN-10/13 equivalence), invalid inputs, retrieval, partial updates, deletion, stable pagination, case-insensitive category matching, threshold boundaries, and query whitelisting.
-- Cover live success/persistence, provider failure, malformed or missing VES rate, latest stored-rate selection, old stored-rate acceptance, and missing-rate 503 with both languages. Provider tests must not depend on a public network service.
+- Cover live success/persistence, provider failure, malformed or missing EUR rate, latest stored-rate selection, old stored-rate acceptance, and missing-rate 503 with both languages. Provider tests must not depend on a public network service.
 - Cover two-stage decimal rounding and the assessment arithmetic example; verify calculation responses and persisted prices agree.
 - Verify changed cost recalculates before a single book persistence operation, while omitted/equivalent cost does not recalculate. Assert rollback/no book mutation on calculation failure. Use narrow database write instrumentation only where needed to verify the explicit single-update requirement.
 - Verify Spanish default, regional language variants, language preferences, stable codes, dictionary-backed validation messages, request paths, and absence of details in production responses.
@@ -140,7 +137,7 @@ The user already approved the primary test boundary: HTTP integration tests agai
 ## Further Notes
 
 - This synthesizes the user-provided Nextep assessment and the completed requirements discussion. User choices take precedence over the assessment's framework preference: NestJS is the chosen framework.
-- “Default rate” in the assessment is implemented as the latest stored USD-to-VES rate, initially established through the seed workflow.
+- “Default rate” in the assessment is implemented as the latest stored USD-to-EUR rate, initially established through the seed workflow.
 - Required delivery remains source repository, local execution documentation and endpoint examples, Docker configuration, public functioning deployment with managed PostgreSQL, and an exported Postman collection configured through variables/environment to target production.
 - Hosting must be free for now. Select the API host, managed database, and logging integration at the end; research suggestions from the interview are not approved provider decisions. Public deployment remains required for final assessment completion.
 - Use the approved workflow next: break this spec into reviewable vertical tickets with real blocking dependencies, then implement the approved tickets. Publishing this spec does not itself start implementation.

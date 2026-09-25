@@ -1,4 +1,4 @@
-# Ticket #5: Calculate and save VES prices with stored-rate fallback
+# Ticket #5: Calculate and save EUR prices with stored-rate fallback
 
 GitHub issue: https://github.com/nescls/bookstore-inventory-api/issues/5 · Status: closed
 
@@ -8,17 +8,17 @@ https://github.com/nescls/bookstore-inventory-api/issues/1
 
 ## What to build
 
-Explicitly calculate a book price using a live USD-to-VES rate or the latest stored rate and save the result.
+Explicitly calculate a book price using a live USD-to-EUR rate or the latest stored rate and save the result.
 
 ## Acceptance criteria
 
-- [x] Migrations persist positive USD-to-VES rates with deterministic creation ordering.
+- [x] Migrations persist positive USD-to-EUR rates with deterministic creation ordering.
 - [x] POST /books/{id}/calculate-price tries the provider with a configurable five-second default timeout, validates and saves successful rates, and falls back on failure/timeout/invalid response to the latest stored rate regardless of age.
 - [x] The shared calculation function uses decimal arithmetic, rounds local cost half-up to two decimals, adds 40% markup, rounds the final price, and returns values without saving the book.
-- [x] The endpoint persists the calculated price once and returns every assessment calculation field with currency VES and numeric monetary/rate fields.
+- [x] The endpoint persists the calculated price once and returns every assessment calculation field with currency EUR and numeric monetary/rate fields.
 - [x] When neither a live nor stored rate exists, the lookup raises exchangeRateUnavailable with localized HTTP 503 and leaves the book unchanged.
 - [x] Clients receive the numerical rate but no provenance indicators; internal diagnostics may record provider/fallback details.
-- [x] Controlled-provider HTTP tests cover persistence, fallback selection, stale rates, invalid or missing VES, timeouts, missing books, and no-rate failure; focused tests cover two-stage rounding including the assessment example.
+- [x] Controlled-provider HTTP tests cover persistence, fallback selection, stale rates, invalid or missing EUR, timeouts, missing books, and no-rate failure; focused tests cover two-stage rounding including the assessment example.
 - [x] Document the deferred morning refresh cron and the absence of automatic bulk repricing.
 
 ## Blocked by

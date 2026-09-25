@@ -13,7 +13,7 @@ Prepare a usable demonstration inventory and initial fallback rate without overw
 ## Acceptance criteria
 
 - [x] An explicit seed command inserts missing sample books with valid canonical ISBNs only.
-- [x] For USD-to-VES, insert an initial rate only if none exists; use provider data with an explicitly supplied offline seed rate as fallback.
+- [x] For USD-to-EUR, insert an initial rate only if none exists; use provider data with an explicitly supplied offline seed rate as fallback.
 - [x] Fail clearly if a required initial rate cannot be obtained; do not fabricate a current rate.
 - [x] Repeated runs preserve existing records and do not add a seed rate that supersedes live data.
 - [x] Tests run seeding repeatedly, preserve edited books and existing rates, insert missing examples, and verify explicit initialization failure.
