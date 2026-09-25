@@ -6,7 +6,7 @@ tickets #2–#8. Deployment #9 is pending the owner's final provider choice.
 ## Standards
 
 Local review checked the project instructions, domain vocabulary, approved testing
-boundaries, and Matt Pocock's code-smell baseline. No outstanding hard standards
+boundaries, and a code-smell baseline. No outstanding hard standards
 violations were found. The shared listing implementation, shared calculation function,
 and dictionary are reused; future authorization and scheduling remain explicit TODOs.
 Tests primarily exercise HTTP behavior with real PostgreSQL and a controlled provider.
