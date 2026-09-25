@@ -45,3 +45,16 @@ use row locks and a transaction to preserve the cost/price invariant.
 The two review agents requested by the code-review skill could not run because of
 an account usage limit. Both review axes were performed locally instead. An independent
 agent review is not claimed.
+
+## Module separation review
+
+Scope: refactor `05f1d78...89a06ed`, requested by the project owner.
+
+- Standards review: no actionable breaches or significant smells. Controllers,
+  services, feature route definitions, central router, modules, and script commands
+  follow the requested architecture.
+- Spec review: no actionable regressions. Transactions, rate-manager propagation,
+  route precedence, validation, migration identities, and build paths are preserved.
+- Both independent review agents completed this refactor review successfully.
+- Verification: 20 tests, type checking, production compilation, Docker rebuild and
+  startup, relocated seed command, and 12 Postman requests / 20 assertions passed.
