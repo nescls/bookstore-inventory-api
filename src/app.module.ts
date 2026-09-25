@@ -1,11 +1,15 @@
 import { DynamicModule, Module } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import { LoggingModule } from "./common/logging/logging.module";
 import { DatabaseModule } from "./database/database.module";
-import { BooksModule } from "./books/books.module";
+import { BooksModule } from "./modules/books/books.module";
 import { router } from "./router";
-@Module({ imports: [BooksModule, router] })
+@Module({ imports: [LoggingModule, BooksModule, router] })
 export class AppModule {
-  static register(db: DataSource): DynamicModule {
-    return { module: AppModule, imports: [DatabaseModule.register(db)] };
+  static register(dataSource: DataSource): DynamicModule {
+    return {
+      module: AppModule,
+      imports: [DatabaseModule.register(dataSource)],
+    };
   }
 }

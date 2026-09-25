@@ -1,4 +1,5 @@
 import "reflect-metadata";
+process.env.LOG_LEVEL = "silent";
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
@@ -7,7 +8,7 @@ import type { AddressInfo } from "node:net";
 let providerCalls = 0;
 let providerStatus = 200;
 let providerDelay = 0;
-let providerBody: unknown = { base: "USD", rates: { VES: 0.85 } };
+let providerBody: unknown = { base: "USD", rates: { EUR: 0.85 } };
 const provider = createServer((_req, res) => {
   providerCalls++;
   res.writeHead(providerStatus, { "Content-Type": "application/json" });
@@ -15,14 +16,20 @@ const provider = createServer((_req, res) => {
 });
 import { seed } from "../scripts/seed";
 import { createApp } from "../src/app";
+import {
+  bookPageResponseSchema,
+  bookResponseSchema,
+  errorResponseSchema,
+  priceCalculationResponseSchema,
+} from "../src/modules/books/dto/books.responses";
 import { createDatabase } from "../src/database/data-source";
-const db = createDatabase(
+const dataSource = createDatabase(
   process.env.TEST_DATABASE_URL ??
     "postgres://bookstore:bookstore@localhost:55433/bookstore_test",
 );
 if (
   !new URL(
-    db.options.type === "postgres" ? db.options.url! : "",
+    dataSource.options.type === "postgres" ? dataSource.options.url! : "",
   ).pathname.endsWith("_test")
 )
   throw new Error("Test database name must end in _test");
@@ -39,30 +46,33 @@ const sample = {
 before(async () => {
   await new Promise<void>((r) => provider.listen(0, "127.0.0.1", r));
   process.env.EXCHANGE_RATE_URL = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`;
-  await db.initialize();
-  await db.runMigrations();
-  app = await createApp(db);
+  await dataSource.initialize();
+  await dataSource.runMigrations();
+  app = await createApp(dataSource);
   await app.init();
 });
 beforeEach(async () => {
-  await db.query("TRUNCATE books, exchange_rates RESTART IDENTITY CASCADE");
+  await dataSource.query(
+    "TRUNCATE books, exchange_rates RESTART IDENTITY CASCADE",
+  );
   providerCalls = 0;
   providerStatus = 200;
   providerDelay = 0;
   process.env.EXCHANGE_RATE_TIMEOUT_MS = "5000";
-  providerBody = { base: "USD", rates: { VES: 0.85 } };
+  providerBody = { base: "USD", rates: { EUR: 0.85 } };
 });
 after(async () => {
   await new Promise<void>((r, j) => provider.close((e) => (e ? j(e) : r())));
   await app?.close();
-  if (db.isInitialized) await db.destroy();
+  if (dataSource.isInitialized) await dataSource.destroy();
 });
 test("create a book and retrieve its saved canonical record", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
     .send(sample)
     .expect(201);
-  assert.equal(created.body.isbn, "9780306406157");
+  assert.equal(created.body.isbn, "978-0-306-40615-7");
+  assert.equal("isbn_canonical" in created.body, false);
   assert.equal(created.body.selling_price_local, null);
   const found = await request(app.getHttpServer())
     .get(`/books/${created.body.id}`)
@@ -169,7 +179,7 @@ test("permanent deletion removes the book and repeated deletion is a localized 4
   assert.equal(repeated.body.error.code, "bookNotFound");
 });
 
-test("calculates and persists the suggested price in VES", async () => {
+test("calculates and persists the suggested price in EUR", async () => {
   const created = await request(app.getHttpServer())
     .post("/books")
     .send(sample)
@@ -180,7 +190,7 @@ test("calculates and persists the suggested price in VES", async () => {
   assert.equal(calculated.body.cost_local, 13.59);
   assert.equal(calculated.body.selling_price_local, 19.03);
   assert.equal(calculated.body.exchange_rate, 0.85);
-  assert.equal(calculated.body.currency, "VES");
+  assert.equal(calculated.body.currency, "EUR");
   assert.equal(calculated.body.margin_percentage, 40);
   assert.equal(
     (await request(app.getHttpServer()).get(`/books/${created.body.id}`)).body
@@ -196,7 +206,7 @@ test("uses the latest stored rate on provider failure without exposing provenanc
     .expect(201);
   const path = `/books/${created.body.id}/calculate-price`;
   await request(app.getHttpServer()).post(path).expect(200);
-  providerBody = { base: "USD", rates: { VES: 2 } };
+  providerBody = { base: "USD", rates: { EUR: 2 } };
   await request(app.getHttpServer()).post(path).expect(200);
   providerStatus = 503;
   const fallback = await request(app.getHttpServer()).post(path).expect(200);
@@ -223,8 +233,8 @@ test("missing usable live or stored rate returns a clear dictionary 503 and pres
     .expect(201);
   for (const invalid of [
     { base: "USD", rates: {} },
-    { base: "EUR", rates: { VES: 1 } },
-    { base: "USD", rates: { VES: 0 } },
+    { base: "GBP", rates: { EUR: 1 } },
+    { base: "USD", rates: { EUR: 0 } },
   ]) {
     providerBody = invalid;
     const failed = await request(app.getHttpServer())
@@ -288,14 +298,14 @@ test("failed cost recalculation leaves all book fields unchanged", async () => {
   assert.deepEqual(found.body, created.body);
 });
 test("seeding only inserts missing records and preserves edited books and existing rates", async () => {
-  await seed(db, "2");
+  await seed(dataSource, "2");
   const first = await request(app.getHttpServer()).get("/books").expect(200);
   assert.ok(first.body.total >= 2);
   await request(app.getHttpServer())
     .put(`/books/${first.body.data[0].id}`)
     .send({ title: "Preserved" })
     .expect(200);
-  await seed(db, "99");
+  await seed(dataSource, "99");
   const second = await request(app.getHttpServer()).get("/books").expect(200);
   assert.equal(second.body.total, first.body.total);
   assert.equal(second.body.data[0].title, "Preserved");
@@ -311,12 +321,14 @@ test("a changed-cost edit issues one book UPDATE", async () => {
     .send(sample)
     .expect(201);
   // Use a persistent test-only audit table because the HTTP request uses another connection.
-  await db.query("CREATE TABLE IF NOT EXISTS test_book_updates (id serial)");
-  await db.query("TRUNCATE test_book_updates");
-  await db.query(
+  await dataSource.query(
+    "CREATE TABLE IF NOT EXISTS test_book_updates (id serial)",
+  );
+  await dataSource.query("TRUNCATE test_book_updates");
+  await dataSource.query(
     `CREATE OR REPLACE FUNCTION test_count_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO test_book_updates DEFAULT VALUES; RETURN NEW; END $$`,
   );
-  await db.query(
+  await dataSource.query(
     "CREATE TRIGGER test_count_update AFTER UPDATE ON books FOR EACH ROW EXECUTE FUNCTION test_count_update()",
   );
   try {
@@ -324,14 +336,14 @@ test("a changed-cost edit issues one book UPDATE", async () => {
       .put(`/books/${created.body.id}`)
       .send({ cost_usd: 20, title: "Changed" })
       .expect(200);
-    const [{ count }] = await db.query(
+    const [{ count }] = await dataSource.query(
       "SELECT count(*) FROM test_book_updates",
     );
     assert.equal(count, "1");
   } finally {
-    await db.query("DROP TRIGGER test_count_update ON books");
-    await db.query("DROP FUNCTION test_count_update()");
-    await db.query("DROP TABLE test_book_updates");
+    await dataSource.query("DROP TRIGGER test_count_update ON books");
+    await dataSource.query("DROP FUNCTION test_count_update()");
+    await dataSource.query("DROP TABLE test_book_updates");
   }
 });
 test("category wildcard characters are treated literally and duplicate updates preserve the original", async () => {
@@ -359,13 +371,13 @@ test("category wildcard characters are treated literally and duplicate updates p
 });
 test("offline seed supplies the first rate, repeated seeds preserve it, and missing initialization fails", async () => {
   providerStatus = 503;
-  await assert.rejects(seed(db, ""), /No initial exchange rate/);
+  await assert.rejects(seed(dataSource, ""), /No initial exchange rate/);
   assert.equal(
     (await request(app.getHttpServer()).get("/books")).body.total,
     0,
   );
-  await seed(db, "2");
-  await seed(db, "99");
+  await seed(dataSource, "2");
+  await seed(dataSource, "99");
   const books = await request(app.getHttpServer()).get("/books").expect(200);
   const price = await request(app.getHttpServer())
     .post(`/books/${books.body.data[0].id}/calculate-price`)
@@ -374,7 +386,7 @@ test("offline seed supplies the first rate, repeated seeds preserve it, and miss
   await request(app.getHttpServer())
     .delete(`/books/${books.body.data[1].id}`)
     .expect(204);
-  await seed(db, "99");
+  await seed(dataSource, "99");
   assert.equal(
     (await request(app.getHttpServer()).get("/books")).body.total,
     2,
@@ -382,16 +394,16 @@ test("offline seed supplies the first rate, repeated seeds preserve it, and miss
 });
 
 test("provider timeout falls back to an old stored rate", async () => {
-  await seed(db);
-  await db.query(
+  await seed(dataSource);
+  await dataSource.query(
     "UPDATE exchange_rates SET created_at = '2000-01-01T00:00:00Z'",
   );
   providerDelay = 100;
-  providerBody = { base: "USD", rates: { VES: 2 } };
+  providerBody = { base: "USD", rates: { EUR: 2 } };
   process.env.EXCHANGE_RATE_TIMEOUT_MS = "10";
   // Configuration is read when a module is constructed; use a separate app/pool.
   const timeoutDb = createDatabase(
-    db.options.type === "postgres" ? db.options.url : undefined,
+    dataSource.options.type === "postgres" ? dataSource.options.url : undefined,
   );
   await timeoutDb.initialize();
   const timeoutApp = await createApp(timeoutDb);
@@ -429,7 +441,7 @@ test("oversized calculated amounts fail without changing the cost or price", asy
   const book = (
     await request(app.getHttpServer()).post("/books").send(sample).expect(201)
   ).body;
-  providerBody = { base: "USD", rates: { VES: 12345678.123456789 } };
+  providerBody = { base: "USD", rates: { EUR: 12345678.123456789 } };
   const failed = await request(app.getHttpServer())
     .put(`/books/${book.id}`)
     .send({ cost_usd: 999999999999.99 })
@@ -449,4 +461,73 @@ test("malformed JSON uses the localized error envelope", async () => {
     .expect(400);
   assert.equal(failed.body.error.code, "invalidInput");
   assert.equal(failed.body.message, "Invalid input.");
+});
+
+test("Swagger UI and the OpenAPI document are public and list every endpoint", async () => {
+  const ui = await request(app.getHttpServer()).get("/docs/").expect(200);
+  assert.match(ui.text, /swagger-ui/);
+  const { body: document } = await request(app.getHttpServer())
+    .get("/docs-json")
+    .expect(200);
+  assert.equal(document.openapi, "3.1.0");
+  const documented = Object.entries(document.paths).flatMap(([path, methods]) =>
+    Object.keys(methods as object).map((method) => `${method} ${path}`),
+  );
+  assert.deepEqual(documented.sort(), [
+    "delete /books/{id}",
+    "get /books",
+    "get /books/low-stock",
+    "get /books/search",
+    "get /books/{id}",
+    "post /books",
+    "post /books/{id}/calculate-price",
+    "put /books/{id}",
+  ]);
+  assert.equal(
+    document.components.schemas.BookInput.additionalProperties,
+    false,
+  );
+  assert.ok(document.components.schemas.BookInput.required.includes("isbn"));
+});
+
+test("real responses match the documented response schemas", async () => {
+  const created = await request(app.getHttpServer())
+    .post("/books")
+    .send(sample)
+    .expect(201);
+  bookResponseSchema.parse(created.body);
+  const id = created.body.id;
+  bookResponseSchema.parse(
+    (await request(app.getHttpServer()).get(`/books/${id}`).expect(200)).body,
+  );
+  bookResponseSchema.parse(
+    (
+      await request(app.getHttpServer())
+        .put(`/books/${id}`)
+        .send({ stock_quantity: 3 })
+        .expect(200)
+    ).body,
+  );
+  for (const url of [
+    "/books",
+    "/books/search?category=Literatura",
+    "/books/low-stock",
+  ])
+    bookPageResponseSchema.parse(
+      (await request(app.getHttpServer()).get(url).expect(200)).body,
+    );
+  priceCalculationResponseSchema.parse(
+    (
+      await request(app.getHttpServer())
+        .post(`/books/${id}/calculate-price`)
+        .expect(200)
+    ).body,
+  );
+  errorResponseSchema.parse(
+    (await request(app.getHttpServer()).get("/books/999999").expect(404)).body,
+  );
+  errorResponseSchema.parse(
+    (await request(app.getHttpServer()).post("/books").send({}).expect(400))
+      .body,
+  );
 });

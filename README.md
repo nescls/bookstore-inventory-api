@@ -1,7 +1,7 @@
 # Bookstore Inventory API
 
 Nextep assessment API built with TypeScript, NestJS, TypeORM, PostgreSQL, and Zod.
-It manages one inventory per ISBN and calculates suggested selling prices in VES.
+It manages one inventory per ISBN and calculates suggested selling prices in EUR.
 [Specification](https://github.com/nescls/bookstore-inventory-api/issues/1) · [Tickets](https://github.com/nescls/bookstore-inventory-api/issues)
 
 ## Run with Docker
@@ -11,7 +11,7 @@ The credentials below are local development defaults only.
 
 ```sh
 docker compose up --build -d --wait
-# Seed fetches a real USD-to-VES rate. If offline, pass an explicit positive rate:
+# Seed fetches a real USD-to-EUR rate. If offline, pass an explicit positive rate:
 docker compose exec api node dist/scripts/seed.js
 # docker compose exec -e SEED_EXCHANGE_RATE=<your-rate> api node dist/scripts/seed.js
 curl http://localhost:3000/books
@@ -87,8 +87,9 @@ curl -X PUT http://localhost:3000/books/1 -H 'Content-Type: application/json' -d
 curl -X DELETE http://localhost:3000/books/1
 ```
 
-ISBN-10/13 check digits are validated, separators are removed, and ISBN-10 converts
-to canonical ISBN-13 before uniqueness checks. Validation does not verify publication
+ISBN-10/13 check digits are validated. The ISBN is stored and returned exactly as
+submitted (trimmed); an internal canonical ISBN-13 (separators removed, ISBN-10
+converted) enforces uniqueness. Validation does not verify publication
 registry assignment. Titles are 1–300 characters, authors 1–200, categories 1–100,
 and supplier country is an ISO alpha-2 code. Strings are trimmed. Stock is an integer
 0–2147483647. Cost is positive, at most 999999999999.99, with at most two decimals.
@@ -106,13 +107,13 @@ An equivalent ISBN also returns 400. Omitted editable fields remain unchanged.
 
 ## Pricing
 
-Calculate local cost as USD cost × USD-to-VES rate, round half-up to two decimals,
+Calculate local cost as USD cost × USD-to-EUR rate, round half-up to two decimals,
 add a 40% **markup on cost**, then round half-up again. The PDF's arithmetic example
 15.99 × 0.85 yields local cost 13.59 and price 19.03. The rate 0.85 is an example,
-not a claim about VES.
+not a claim about EUR.
 
 Each calculation tries the provider and records successful rates. Provider failure,
-timeout, or invalid data selects the latest created stored USD-to-VES rate, with no
+timeout, or invalid data selects the latest created stored USD-to-EUR rate, with no
 age cutoff. The public response includes the numerical rate but no source indicator.
 When neither live nor stored data is usable, return 503 `exchangeRateUnavailable`.
 
@@ -120,6 +121,14 @@ An actual change in USD cost triggers the same calculation before one book updat
 An omitted or numerically equal cost skips calculation. A failed calculation leaves
 all book fields unchanged. Row locking serializes competing edits/calculations on a
 book. Updating an exchange-rate record does not reprice other books.
+
+## API documentation
+
+Interactive Swagger UI is public at `/docs` (for example `http://localhost:3000/docs`),
+and the raw OpenAPI 3.1 document at `/docs-json`. Request and response schemas are generated
+from the same Zod schemas that validate requests (`dto/books.schemas.ts`,
+`dto/books.responses.ts`), and a test checks real responses against them. `@nestjs/swagger`
+is not used because it does not support TypeScript 7.
 
 ## Errors and logging
 
@@ -137,9 +146,26 @@ with Spanish fallback. Every public message comes from the error dictionary.
 ```
 
 `error.details` is omitted in production. Outside production it contains sanitized
-validation/diagnostic data. JSON logs on stderr include timestamp, code, status, path,
-and safe details; raw request bodies and credentials are not logged. Durable storage,
-retention, Grafana, or host-specific logging will be chosen at deployment time.
+validation/diagnostic data. Raw request bodies, headers and credentials are never logged.
+
+### Logging
+
+Logging uses [pino](https://getpino.io) through `nestjs-pino`: one JSON record per
+request (method, url, status, duration) plus a `Request rejected` warning (4xx) or
+`Request failed` error (5xx) with the error code, and a warning when the exchange
+provider falls back to the stored rate. Two destinations, chosen by environment:
+
+| Variable                | Effect                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `LOG_LEVEL`             | `trace`…`fatal` or `silent`; default `info`                                         |
+| `GOOGLE_CLOUD_LOG_NAME` | Detached logger: send all records to Google Cloud Logging under this name           |
+| `LOG_DIR`               | Local logger (when no Google log name is set): folder for `app.log`, default `logs` |
+
+Without `GOOGLE_CLOUD_LOG_NAME`, records go to stdout and to `logs/app.log`. With it,
+records go only to Google Cloud Logging (if its credentials cannot be loaded at startup,
+the API prints a warning on stderr and uses the local logger instead), using the standard `GOOGLE_APPLICATION_CREDENTIALS`
+and `GOOGLE_CLOUD_PROJECT` settings (or the platform's default identity on Google Cloud).
+In Docker the file lives inside the container; mount a volume on `/app/logs` to keep it.
 
 ## Tests
 
@@ -147,6 +173,8 @@ retention, Grafana, or host-specific logging will be chosen at deployment time.
 npm ci
 docker compose --profile test up -d --wait test-db
 npm run typecheck
+npm run lint        # Prettier format check (used by CI)
+npm run lint:code   # Biome lint
 npm test
 npm run build
 ```
@@ -202,35 +230,39 @@ There is no frontend, branch inventory, bulk repricing, or exchange-rate admin A
 
 ```text
 src/
-  app.module.ts                  Root Nest module
-  app.ts                         Application factory / global error filter
   main.ts                        Bootstrap
+  app.ts                         Application factory / global error filter
+  app.module.ts                  Root Nest module
   router.ts                      Central feature-module router
-  books/
-    books.module.ts              Books module wiring
-    books.controller.ts          HTTP input, validation, service calls
-    books.service.ts             Queries, transactions, edits and persistence
-    books.routes.ts              Route paths (mounted under /books)
-    model/
-      books.schemas.ts           Zod inputs and ISBN normalization
-      book.entity.ts             Book persistence model
-    book.presenter.ts            Public response mapping
-  exchange-rates/
-    exchange-rates.module.ts     Rate module wiring
-    exchange-rates.service.ts    Provider retrieval and stored fallback
-    exchange-rate.entity.ts      Exchange-rate persistence model
-    exchange-rate.validation.ts  Numerical rate validation
-  pricing/
-    pricing.module.ts            Pricing module wiring
-    pricing.service.ts           Rate resolution and calculation orchestration
-    price-calculation.ts         Decimal price arithmetic
+  modules/
+    books/
+      books.module.ts            Books module wiring
+      books.controller.ts        HTTP input, validation, service calls
+      books.service.ts           Queries, transactions, updates and persistence
+      books.routes.ts            Route paths (mounted under /books)
+      dto/books.schemas.ts       Zod request schemas
+      dto/books.responses.ts     Zod response schemas (docs and tests)
+      entities/book.entity.ts    Book persistence model
+      utils/                     Pure functions: isbn.ts, serialize-book.ts
+    exchange-rates/
+      exchange-rates.module.ts   Rate module wiring
+      exchange-rates.service.ts  Provider retrieval and stored fallback
+      entities/                  Exchange-rate persistence model
+      utils/is-valid-rate.ts     Numerical rate validation
+    pricing/
+      pricing.module.ts          Pricing module wiring
+      pricing.service.ts         Rate resolution and calculation orchestration
+      utils/calculate-price.ts   Decimal price arithmetic
+  common/
+    errors/                      ApiError and localized error messages
+    filters/error.filter.ts      Global exception filter
+    logging/                     pino setup: local file or Google Cloud Logging
+    utils/                       parse, resolve-language
+  docs/                          OpenAPI document builder and Swagger UI setup
   database/
     database.module.ts           Shared connection and shutdown lifecycle
     data-source.ts               TypeORM configuration
     migrations/                  Versioned schema migrations
-  common/
-    errors.ts                    Dictionary, language selection, filter and logs
-    validation.ts                Shared Zod parsing and error mapping
 scripts/
   seed.ts                        Insert-only sample-data command
   migrate.ts                     Migration command
@@ -239,13 +271,11 @@ scripts/
 The central router mounts `BooksModule`; controller decorators use the feature's
 route definitions. Controllers handle HTTP concerns; services own persistence and
 business behavior. `BooksService` injects `PricingService`, which uses the exported
-`ExchangeRatesService`. The edit transaction's manager is passed through pricing
+`ExchangeRatesService`. The update transaction's manager is passed through pricing
 and rate storage so the one-update and rollback guarantees stay intact.
 The build emits `dist/src/` and `dist/scripts/`; Docker and npm commands use these
 paths. Existing migration names and database tables are unchanged.
 
-## Agent workflow
+## Documentation
 
-Use project-local Matt Pocock skills through `AGENTS.md`:
-`grill-with-docs → to-spec → to-tickets → implement`. Skills are pinned in
-`docs/skills-source.json`; domain terms live in `CONTEXT.md`.
+The specification, tickets and implementation review are in [`docs/`](docs/README.md); domain terms live in `CONTEXT.md`.

@@ -1,13 +1,18 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import { Logger } from "nestjs-pino";
 import { DataSource } from "typeorm";
 import { AppModule } from "./app.module";
-import { ErrorFilter } from "./common/errors";
-export async function createApp(db: DataSource) {
-  const app = await NestFactory.create(AppModule.register(db), {
-    logger: false,
+import { ErrorFilter } from "./common/filters/error.filter";
+import { setupDocs } from "./docs/setup-docs";
+export async function createApp(dataSource: DataSource) {
+  const app = await NestFactory.create(AppModule.register(dataSource), {
+    bufferLogs: true,
   });
-  app.useGlobalFilters(new ErrorFilter());
+  const logger = app.get(Logger);
+  app.useLogger(logger);
+  app.useGlobalFilters(new ErrorFilter(logger));
+  setupDocs(app);
   app.enableShutdownHooks();
   return app;
 }
