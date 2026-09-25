@@ -1,7 +1,7 @@
 import { z } from "zod";
 import Decimal from "decimal.js";
 import validator from "validator";
-import { ApiError } from "./errors";
+import { parse } from "../common/validation";
 export function canonicalIsbn(input: string) {
   const s = input.replace(/[\s-]/g, "").toUpperCase();
   if (!validator.isISBN(s)) return null;
@@ -39,22 +39,6 @@ export const createBookSchema = z.strictObject({
     .toUpperCase()
     .refine((s) => validator.isISO31661Alpha2(s)),
 });
-export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
-  const result = schema.safeParse(input);
-  if (result.success) return result.data;
-  const issue = result.error.issues[0];
-  const field = typeof issue.path[0] === "string" ? issue.path[0] : undefined;
-  throw new ApiError(
-    field === "cost_usd"
-      ? "invalidCost"
-      : field
-        ? "invalidField"
-        : "invalidInput",
-    400,
-    result.error.issues.map((i) => ({ path: i.path, code: i.code })),
-    field,
-  );
-}
 export const bookId = (id: string) =>
   parse(z.coerce.number().int().positive().max(2147483647), id);
 const queryInteger = z
@@ -78,3 +62,6 @@ export const lowStockSchema = z.strictObject({
 export const updateBookSchema = createBookSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0);
+
+export type CreateBookInput = z.output<typeof createBookSchema>;
+export type UpdateBookInput = z.output<typeof updateBookSchema>;

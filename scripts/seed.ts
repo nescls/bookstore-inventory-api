@@ -1,8 +1,11 @@
 import { DataSource } from "typeorm";
-import { BookEntity, createDatabase } from "./database";
-import { ExchangeRateEntity } from "./exchange-rate-model";
-import { Pricing, validRate } from "./pricing";
-import { createBookSchema, parse } from "./validation";
+import { BookEntity } from "../src/books/book.entity";
+import { createDatabase } from "../src/database/data-source";
+import { ExchangeRateEntity } from "../src/exchange-rates/exchange-rate.entity";
+import { ExchangeRatesService } from "../src/exchange-rates/exchange-rates.service";
+import { validRate } from "../src/exchange-rates/exchange-rate.validation";
+import { createBookSchema } from "../src/books/books.schemas";
+import { parse } from "../src/common/validation";
 const examples = [
   {
     title: "A Brief History of Time",
@@ -36,7 +39,7 @@ export async function seed(
     if (!(await rates.findOneBy({ base: "USD", quote: "VES" }))) {
       let rate: number;
       try {
-        rate = await new Pricing(manager).liveRate();
+        rate = await new ExchangeRatesService(db).liveRate();
       } catch {
         rate = Number(offlineRate);
         if (!validRate(rate))

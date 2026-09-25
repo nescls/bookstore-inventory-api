@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\" && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/main.js",
+    "start": "node dist/src/main.js",
     "dev": "tsx watch src/main.ts",
     "test": "tsx --test --test-concurrency=1 test/*.test.ts",
     "test:integration": "tsx --test test/api.test.ts",
-    "db:migrate": "tsx src/migrate.ts",
-    "db:seed": "tsx src/seed.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts"
   },
   "engines": {
     "node": ">=24 <25"

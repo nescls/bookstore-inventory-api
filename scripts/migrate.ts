@@ -1,4 +1,4 @@
-import { createDatabase } from "./database";
+import { createDatabase } from "../src/database/data-source";
 async function main() {
   const db = createDatabase();
   try {

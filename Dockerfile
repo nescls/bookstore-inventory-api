@@ -4,6 +4,7 @@ COPY package*.json ./
 RUN npm ci
 COPY tsconfig*.json ./
 COPY src ./src
+COPY scripts ./scripts
 RUN npm run build && npm prune --omit=dev
 FROM node:24-alpine
 ENV NODE_ENV=production
@@ -13,4 +14,4 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 USER node
 EXPOSE 3000
-CMD ["sh", "-c", "node dist/migrate.js && node dist/main.js"]
+CMD ["sh", "-c", "node dist/scripts/migrate.js && node dist/src/main.js"]

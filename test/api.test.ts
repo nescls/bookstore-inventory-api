@@ -13,9 +13,9 @@ const provider = createServer((_req, res) => {
   res.writeHead(providerStatus, { "Content-Type": "application/json" });
   setTimeout(() => res.end(JSON.stringify(providerBody)), providerDelay);
 });
-import { seed } from "../src/seed";
+import { seed } from "../scripts/seed";
 import { createApp } from "../src/app";
-import { createDatabase } from "../src/database";
+import { createDatabase } from "../src/database/data-source";
 const db = createDatabase(
   process.env.TEST_DATABASE_URL ??
     "postgres://bookstore:bookstore@localhost:55433/bookstore_test",
@@ -387,12 +387,24 @@ test("provider timeout falls back to an old stored rate", async () => {
     "UPDATE exchange_rates SET created_at = '2000-01-01T00:00:00Z'",
   );
   providerDelay = 100;
+  providerBody = { base: "USD", rates: { VES: 2 } };
   process.env.EXCHANGE_RATE_TIMEOUT_MS = "10";
-  const books = await request(app.getHttpServer()).get("/books");
-  const calculated = await request(app.getHttpServer())
-    .post(`/books/${books.body.data[0].id}/calculate-price`)
-    .expect(200);
-  assert.equal(calculated.body.exchange_rate, 0.85);
+  // Configuration is read when a module is constructed; use a separate app/pool.
+  const timeoutDb = createDatabase(
+    db.options.type === "postgres" ? db.options.url : undefined,
+  );
+  await timeoutDb.initialize();
+  const timeoutApp = await createApp(timeoutDb);
+  await timeoutApp.init();
+  try {
+    const books = await request(timeoutApp.getHttpServer()).get("/books");
+    const calculated = await request(timeoutApp.getHttpServer())
+      .post(`/books/${books.body.data[0].id}/calculate-price`)
+      .expect(200);
+    assert.equal(calculated.body.exchange_rate, 0.85);
+  } finally {
+    await timeoutApp.close();
+  }
 });
 test("simultaneous edits preserve unrelated fields and leave a consistent price", async () => {
   const book = (await request(app.getHttpServer()).post("/books").send(sample))

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculatePrice } from "../src/pricing";
-import { language } from "../src/errors";
+import { calculatePrice } from "../src/pricing/price-calculation";
+import { language } from "../src/common/errors";
 test("two-stage half-up rounding matches the assessment example", () => {
   assert.deepEqual(calculatePrice("15.99", "0.85"), {
     cost_local: 13.59,

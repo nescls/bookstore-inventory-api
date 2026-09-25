@@ -12,8 +12,8 @@ The credentials below are local development defaults only.
 ```sh
 docker compose up --build -d --wait
 # Seed fetches a real USD-to-VES rate. If offline, pass an explicit positive rate:
-docker compose exec api node dist/seed.js
-# docker compose exec -e SEED_EXCHANGE_RATE=<your-rate> api node dist/seed.js
+docker compose exec api node dist/scripts/seed.js
+# docker compose exec -e SEED_EXCHANGE_RATE=<your-rate> api node dist/scripts/seed.js
 curl http://localhost:3000/books
 ```
 
@@ -35,8 +35,8 @@ and use Node's environment-file support; credentials must not be committed.
 ```sh
 npm ci
 docker compose up -d --wait db
-node --env-file=.env --import tsx src/migrate.ts
-node --env-file=.env --import tsx src/seed.ts
+node --env-file=.env --import tsx scripts/migrate.ts
+node --env-file=.env --import tsx scripts/seed.ts
 node --env-file=.env --import tsx src/main.ts
 ```
 
@@ -167,6 +167,51 @@ must be updated and tested before final delivery. No provider is selected yet.
 TODOs: token validation, roles/permissions, functional soft deletion with real actor
 attribution, and a morning exchange-rate cron with an agreed time/timezone and scheduler.
 There is no frontend, branch inventory, bulk repricing, or exchange-rate admin API.
+
+## Architecture
+
+```text
+src/
+  app.module.ts                  Root Nest module
+  app.ts                         Application factory / global error filter
+  main.ts                        Bootstrap
+  router.ts                      Central feature-module router
+  books/
+    books.module.ts              Books module wiring
+    books.controller.ts          HTTP input, validation, service calls
+    books.service.ts             Queries, transactions, edits and persistence
+    books.routes.ts              Route paths (mounted under /books)
+    books.schemas.ts             Zod inputs and ISBN normalization
+    book.entity.ts               Book persistence model
+    book.presenter.ts            Public response mapping
+  exchange-rates/
+    exchange-rates.module.ts     Rate module wiring
+    exchange-rates.service.ts    Provider retrieval and stored fallback
+    exchange-rate.entity.ts      Exchange-rate persistence model
+    exchange-rate.validation.ts  Numerical rate validation
+  pricing/
+    pricing.module.ts            Pricing module wiring
+    pricing.service.ts           Rate resolution and calculation orchestration
+    price-calculation.ts         Decimal price arithmetic
+  database/
+    database.module.ts           Shared connection and shutdown lifecycle
+    data-source.ts               TypeORM configuration
+    migrations/                  Versioned schema migrations
+  common/
+    errors.ts                    Dictionary, language selection, filter and logs
+    validation.ts                Shared Zod parsing and error mapping
+scripts/
+  seed.ts                        Insert-only sample-data command
+  migrate.ts                     Migration command
+```
+
+The central router mounts `BooksModule`; controller decorators use the feature's
+route definitions. Controllers handle HTTP concerns; services own persistence and
+business behavior. `BooksService` injects `PricingService`, which uses the exported
+`ExchangeRatesService`. The edit transaction's manager is passed through pricing
+and rate storage so the one-update and rollback guarantees stay intact.
+The build emits `dist/src/` and `dist/scripts/`; Docker and npm commands use these
+paths. Existing migration names and database tables are unchanged.
 
 ## Agent workflow
 

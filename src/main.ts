@@ -1,5 +1,5 @@
 import { createApp } from "./app";
-import { createDatabase } from "./database";
+import { createDatabase } from "./database/data-source";
 async function main() {
   const db = createDatabase();
   await db.initialize();
