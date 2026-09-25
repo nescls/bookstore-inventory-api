@@ -164,7 +164,8 @@ In Docker the file lives inside the container; mount a volume on `/app/logs` to 
 npm ci
 docker compose --profile test up -d --wait test-db
 npm run typecheck
-npm run lint
+npm run lint        # Prettier format check (used by CI)
+npm run lint:code   # Biome lint
 npm test
 npm run build
 ```
