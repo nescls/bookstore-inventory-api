@@ -1,0 +1,40 @@
+# Cloud Build pipeline: build the image, push it, deploy to Cloud Run.
+# Triggered by pushes to main. No credentials are stored in this repository:
+# the trigger runs as a dedicated least-privilege service account and the
+# database URL comes from Secret Manager.
+substitutions:
+  _REGION: us-east1
+  _SERVICE: bookstore-inventory-api
+  _REPOSITORY: cloud-run-source-deploy
+  _SQL_INSTANCE: testing-6da33:us-east1:bookstore-db
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
+      - .
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --allow-unauthenticated
+      - --max-instances=1
+      - --add-cloudsql-instances=${_SQL_INSTANCE}
+      - --set-secrets=DATABASE_URL=database-url:latest
+      - --set-env-vars=NODE_ENV=production,SEED_ON_START=true,EXCHANGE_RATE_TIMEOUT_MS=5000,EXCHANGE_RATE_URL=https://api.exchangerate-api.com/v4/latest/USD
+
+options:
+  logging: CLOUD_LOGGING_ONLY
