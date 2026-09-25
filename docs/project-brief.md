@@ -67,13 +67,13 @@ TypeScript stack takes precedence.
 - ISBN normalization/checksum rules, update semantics, and invalidated stored prices.
 - Optional endpoints and pagination scope.
 - Testing seams, deployment provider, managed database, and deployment budget.
-- Agent instruction file.
 
 ## Confirmed setup decisions
 
 - Private GitHub repository: nescls/bookstore-inventory-api.
 - Specs and tickets live in GitHub Issues.
 - Framework: NestJS (not Next.js).
+- Agent instructions: AGENTS.md, with the reviewed GitHub Issues and domain-doc configuration.
 
 ## Deferred
 

@@ -18,7 +18,7 @@ Use Matt Pocock’s `grill-with-docs → to-spec → to-tickets → implement` w
 Project skills are vendored in `.agents/skills/`; supporting skills are included.
 See `docs/skills-source.json` for the pinned upstream revision and license.
 Specs and tickets will live in GitHub Issues for `nescls/bookstore-inventory-api`.
-Agent configuration is awaiting final setup review.
+Agent configuration lives in `AGENTS.md` and `docs/agents/`.
 
 ## Requirements
 
