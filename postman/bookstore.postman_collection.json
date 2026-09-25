@@ -1,0 +1,379 @@
+{
+  "info": {
+    "name": "Bookstore Inventory API",
+    "description": "Run in order. Requires a migrated, seeded API. The collection creates and permanently deletes its own sample book. Choose local or production environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "bookId",
+      "value": ""
+    },
+    {
+      "key": "sampleIsbn",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Create book",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman example\",\n  \"author\": \"API evaluator\",\n  \"isbn\": \"{{sampleIsbn}}\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 5,\n  \"category\": \"Postman\",\n  \"supplier_country\": \"VE\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set(\"bookId\", pm.response.json().id);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const base=\"978\"+String(Math.floor(Math.random()*1e9)).padStart(9,\"0\");",
+              "const sum=[...base].reduce((a,d,i)=>a+Number(d)*(i%2?3:1),0);",
+              "pm.collectionVariables.set(\"sampleIsbn\",base+((10-sum%10)%10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Retrieve book",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Created ISBN\",()=>pm.expect(pm.response.json().isbn).to.eql(pm.collectionVariables.get(\"sampleIsbn\")));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List books",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books?page=1&limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Pagination\",()=>pm.expect(pm.response.json()).to.have.keys(\"data\",\"page\",\"limit\",\"total\",\"totalPages\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Category search",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/search?category=POSTMAN&page=1&limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Low stock",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/low-stock?threshold=10&page=1&limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calculate VES price",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}/calculate-price"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"VES calculation\",()=>pm.expect(pm.response.json().currency).to.eql(\"VES\"));",
+              "pm.test(\"No rate provenance\",()=>pm.expect(pm.response.json()).not.to.have.property(\"rate_source\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Partial edit and recalculate",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cost_usd\": 20\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Changed cost\",()=>pm.expect(pm.response.json().cost_usd).to.eql(20));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate ISBN",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman example\",\n  \"author\": \"API evaluator\",\n  \"isbn\": \"{{sampleIsbn}}\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 5,\n  \"category\": \"Postman\",\n  \"supplier_country\": \"VE\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Duplicate code\",()=>pm.expect(pm.response.json().error.code).to.eql(\"duplicateIsbn\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid cost in English",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "en-US"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cost_usd\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"English dictionary\",()=>pm.expect(pm.response.json().message).to.eql(\"Cost must be positive and have at most two decimal places.\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown query rejected",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books?unexpected=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete book",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted book is missing",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept-Language",
+            "value": "{{language}}"
+          }
+        ],
+        "url": "{{baseUrl}}/books/{{bookId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+              "pm.test(\"Missing book code\",()=>pm.expect(pm.response.json().error.code).to.eql(\"bookNotFound\"));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
