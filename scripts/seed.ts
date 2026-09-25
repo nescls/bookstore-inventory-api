@@ -2,7 +2,10 @@ import { DataSource } from "typeorm";
 import { BookEntity } from "../src/modules/books/entities/book.entity";
 import { createDatabase } from "../src/database/data-source";
 import { ExchangeRateEntity } from "../src/modules/exchange-rates/entities/exchange-rate.entity";
-import { ExchangeRatesService } from "../src/modules/exchange-rates/exchange-rates.service";
+import {
+  fetchProviderRate,
+  readProviderConfig,
+} from "../src/modules/exchange-rates/utils/provider-rate";
 import { isValidRate } from "../src/modules/exchange-rates/utils/is-valid-rate";
 import { createBookSchema } from "../src/modules/books/dto/books.schemas";
 import { requireCanonicalIsbn } from "../src/modules/books/utils/isbn";
@@ -42,7 +45,8 @@ export async function seed(
     ) {
       let rate: number;
       try {
-        rate = await new ExchangeRatesService(dataSource).fetchLiveRate();
+        const { url, timeoutMs } = readProviderConfig();
+        rate = await fetchProviderRate(url, timeoutMs);
       } catch {
         rate = Number(offlineRate);
         if (!isValidRate(rate))

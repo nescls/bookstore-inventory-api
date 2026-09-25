@@ -137,9 +137,26 @@ with Spanish fallback. Every public message comes from the error dictionary.
 ```
 
 `error.details` is omitted in production. Outside production it contains sanitized
-validation/diagnostic data. JSON logs on stderr include timestamp, code, status, path,
-and safe details; raw request bodies and credentials are not logged. Durable storage,
-retention, Grafana, or host-specific logging will be chosen at deployment time.
+validation/diagnostic data. Raw request bodies, headers and credentials are never logged.
+
+### Logging
+
+Logging uses [pino](https://getpino.io) through `nestjs-pino`: one JSON record per
+request (method, url, status, duration) plus a `Request rejected` warning (4xx) or
+`Request failed` error (5xx) with the error code, and a warning when the exchange
+provider falls back to the stored rate. Two destinations, chosen by environment:
+
+| Variable                | Effect                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `LOG_LEVEL`             | `trace`…`fatal` or `silent`; default `info`                                         |
+| `GOOGLE_CLOUD_LOG_NAME` | Detached logger: send all records to Google Cloud Logging under this name           |
+| `LOG_DIR`               | Local logger (when no Google log name is set): folder for `app.log`, default `logs` |
+
+Without `GOOGLE_CLOUD_LOG_NAME`, records go to stdout and to `logs/app.log`. With it,
+records go only to Google Cloud Logging (if its credentials cannot be loaded at startup,
+the API prints a warning on stderr and uses the local logger instead), using the standard `GOOGLE_APPLICATION_CREDENTIALS`
+and `GOOGLE_CLOUD_PROJECT` settings (or the platform's default identity on Google Cloud).
+In Docker the file lives inside the container; mount a volume on `/app/logs` to keep it.
 
 ## Tests
 
@@ -199,7 +216,8 @@ src/
   common/
     errors/                      ApiError and localized error messages
     filters/error.filter.ts      Global exception filter
-    utils/                       parse, resolve-language, log-event
+    logging/                     pino setup: local file or Google Cloud Logging
+    utils/                       parse, resolve-language
   database/
     database.module.ts           Shared connection and shutdown lifecycle
     data-source.ts               TypeORM configuration

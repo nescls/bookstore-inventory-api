@@ -2,10 +2,11 @@ import { ArgumentsHost, Catch, ExceptionFilter } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { ApiError } from "../errors/api-error";
 import { errorMessages } from "../errors/error-messages";
-import { logEvent } from "../utils/log-event";
+import { Logger } from "nestjs-pino";
 import { resolveLanguage } from "../utils/resolve-language";
 @Catch()
 export class ErrorFilter implements ExceptionFilter {
+  constructor(private readonly logger: Logger) {}
   catch(error: unknown, host: ArgumentsHost) {
     const request = host.switchToHttp().getRequest<Request>();
     const response = host.switchToHttp().getResponse<Response>();
@@ -40,8 +41,7 @@ export class ErrorFilter implements ExceptionFilter {
       apiError.field ?? "",
     );
     const details = apiError.details ?? { reason: apiError.code };
-    logEvent({
-      level: "error",
+    const fields = {
       code: apiError.code,
       status: apiError.status,
       path: request.path,
@@ -56,7 +56,10 @@ export class ErrorFilter implements ExceptionFilter {
               .slice(0, 8),
           }
         : {}),
-    });
+    };
+    if (apiError.status >= 500)
+      this.logger.error({ ...fields, msg: "Request failed" });
+    else this.logger.warn({ ...fields, msg: "Request rejected" });
     response.status(apiError.status).json({
       error: {
         code: apiError.code,

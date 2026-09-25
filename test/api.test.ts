@@ -1,4 +1,5 @@
 import "reflect-metadata";
+process.env.LOG_LEVEL = "silent";
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
