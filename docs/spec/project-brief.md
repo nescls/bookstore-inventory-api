@@ -113,8 +113,12 @@ TypeScript stack takes precedence.
   database and controlled exchange-rate provider; focused pricing and language tests.
 - Parse and whitelist query parameters using Zod before composing TypeORM find
   options. Spread validated filters only; map pagination/operators to ORM options.
-- Hosting must be free for now. Select the provider at the end, per user direction;
-  no host or tolerance for cold starts is approved yet.
+- Hosting: originally free-only, deferred to the end. Decided 2026-09-25: Google Cloud
+  Run for the API and Cloud SQL for PostgreSQL (project `testing-6da33`, region
+  `us-east1`), accepting the Cloud SQL cost (no free tier, about $8-10/month) so that
+  all services sit on one recognized provider named by the assessment. Cloud Run
+  scales to zero, so cold starts of a few seconds are accepted. The insert-only seed
+  runs on container start when `SEED_ON_START=true`.
 
 ## Specification handoff
 
