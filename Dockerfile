@@ -15,4 +15,4 @@ COPY --from=build --chown=node:node /app/dist ./dist
 RUN mkdir logs && chown node:node logs
 USER node
 EXPOSE 3000
-CMD ["sh", "-c", "node dist/scripts/migrate.js && node dist/src/main.js"]
+CMD ["sh", "-c", "node dist/scripts/migrate.js && { if [ \"$SEED_ON_START\" = \"true\" ]; then node dist/scripts/seed.js || echo 'Seed failed; starting the API anyway.'; fi; exec node dist/src/main.js; }"]
