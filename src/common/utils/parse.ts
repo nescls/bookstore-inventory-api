@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiError } from "./errors";
+import { ApiError } from "../errors/api-error";
 export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
@@ -12,7 +12,10 @@ export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
         ? "invalidField"
         : "invalidInput",
     400,
-    result.error.issues.map((i) => ({ path: i.path, code: i.code })),
+    result.error.issues.map((issue) => ({
+      path: issue.path,
+      code: issue.code,
+    })),
     field,
   );
 }

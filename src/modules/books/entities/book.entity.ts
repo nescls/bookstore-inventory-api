@@ -4,6 +4,7 @@ export interface Book {
   title: string;
   author: string;
   isbn: string;
+  isbn_canonical: string;
   cost_usd: string;
   selling_price_local: string | null;
   stock_quantity: number;
@@ -21,7 +22,8 @@ export const BookEntity = new EntitySchema<Book>({
     id: { type: Number, primary: true, generated: true },
     title: { type: String, length: 300 },
     author: { type: String, length: 200 },
-    isbn: { type: String, length: 13, unique: true },
+    isbn: { type: String, length: 32 },
+    isbn_canonical: { type: String, length: 13, unique: true },
     cost_usd: { type: "numeric", precision: 14, scale: 2 },
     selling_price_local: {
       type: "numeric",

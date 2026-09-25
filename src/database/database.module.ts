@@ -9,15 +9,15 @@ import { DataSource } from "typeorm";
 @Global()
 @Module({})
 export class DatabaseModule implements OnApplicationShutdown {
-  constructor(@Inject(DataSource) private readonly db: DataSource) {}
-  static register(db: DataSource): DynamicModule {
+  constructor(@Inject(DataSource) private readonly dataSource: DataSource) {}
+  static register(dataSource: DataSource): DynamicModule {
     return {
       module: DatabaseModule,
-      providers: [{ provide: DataSource, useValue: db }],
+      providers: [{ provide: DataSource, useValue: dataSource }],
       exports: [DataSource],
     };
   }
   async onApplicationShutdown() {
-    if (this.db.isInitialized) await this.db.destroy();
+    if (this.dataSource.isInitialized) await this.dataSource.destroy();
   }
 }

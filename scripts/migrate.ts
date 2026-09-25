@@ -1,11 +1,11 @@
 import { createDatabase } from "../src/database/data-source";
 async function main() {
-  const db = createDatabase();
+  const dataSource = createDatabase();
   try {
-    await db.initialize();
-    await db.runMigrations();
+    await dataSource.initialize();
+    await dataSource.runMigrations();
   } finally {
-    if (db.isInitialized) await db.destroy();
+    if (dataSource.isInitialized) await dataSource.destroy();
   }
 }
 main().catch(() => {

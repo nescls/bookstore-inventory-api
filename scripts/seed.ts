@@ -1,12 +1,13 @@
 import { DataSource } from "typeorm";
-import { BookEntity } from "../src/books/model/book.entity";
+import { BookEntity } from "../src/modules/books/entities/book.entity";
 import { createDatabase } from "../src/database/data-source";
-import { ExchangeRateEntity } from "../src/exchange-rates/exchange-rate.entity";
-import { ExchangeRatesService } from "../src/exchange-rates/exchange-rates.service";
-import { validRate } from "../src/exchange-rates/exchange-rate.validation";
-import { createBookSchema } from "../src/books/model/books.schemas";
-import { parse } from "../src/common/validation";
-const examples = [
+import { ExchangeRateEntity } from "../src/modules/exchange-rates/entities/exchange-rate.entity";
+import { ExchangeRatesService } from "../src/modules/exchange-rates/exchange-rates.service";
+import { isValidRate } from "../src/modules/exchange-rates/utils/is-valid-rate";
+import { createBookSchema } from "../src/modules/books/dto/books.schemas";
+import { requireCanonicalIsbn } from "../src/modules/books/utils/isbn";
+import { parse } from "../src/common/utils/parse";
+const sampleBooks = [
   {
     title: "A Brief History of Time",
     author: "Stephen Hawking",
@@ -27,41 +28,44 @@ const examples = [
   },
 ];
 export async function seed(
-  db: DataSource,
+  dataSource: DataSource,
   offlineRate = process.env.SEED_EXCHANGE_RATE,
 ) {
-  await db.transaction(async (manager) => {
+  await dataSource.transaction(async (manager) => {
     // Seed initialization must not race a successful provider-rate insert.
     await manager.query(
       "LOCK TABLE exchange_rates IN SHARE ROW EXCLUSIVE MODE",
     );
-    const rates = manager.getRepository(ExchangeRateEntity);
-    if (!(await rates.findOneBy({ base: "USD", quote: "VES" }))) {
+    const exchangeRateRepository = manager.getRepository(ExchangeRateEntity);
+    if (
+      !(await exchangeRateRepository.findOneBy({ base: "USD", quote: "EUR" }))
+    ) {
       let rate: number;
       try {
-        rate = await new ExchangeRatesService(db).liveRate();
+        rate = await new ExchangeRatesService(dataSource).fetchLiveRate();
       } catch {
         rate = Number(offlineRate);
-        if (!validRate(rate))
+        if (!isValidRate(rate))
           throw new Error(
             "No initial exchange rate available. Supply a valid SEED_EXCHANGE_RATE for offline seeding.",
           );
       }
-      await rates.insert({
+      await exchangeRateRepository.insert({
         base: "USD",
-        quote: "VES",
+        quote: "EUR",
         rate: String(rate),
         created_at: new Date(),
       });
     }
-    const books = manager.getRepository(BookEntity);
-    for (const example of examples) {
-      const input = parse(createBookSchema, example);
-      await books
+    const bookRepository = manager.getRepository(BookEntity);
+    for (const sampleBook of sampleBooks) {
+      const input = parse(createBookSchema, sampleBook);
+      await bookRepository
         .createQueryBuilder()
         .insert()
         .values({
           ...input,
+          isbn_canonical: requireCanonicalIsbn(input.isbn),
           cost_usd: String(input.cost_usd),
           selling_price_local: null,
         })
@@ -71,17 +75,17 @@ export async function seed(
   });
 }
 async function main() {
-  const db = createDatabase();
+  const dataSource = createDatabase();
   try {
-    await db.initialize();
-    await seed(db);
+    await dataSource.initialize();
+    await seed(dataSource);
     console.log("Missing sample data inserted.");
   } finally {
-    if (db.isInitialized) await db.destroy();
+    if (dataSource.isInitialized) await dataSource.destroy();
   }
 }
 if (require.main === module)
-  main().catch((e) => {
-    console.error(e instanceof Error ? e.message : "Seed failed");
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : "Seed failed");
     process.exitCode = 1;
   });
