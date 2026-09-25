@@ -20,3 +20,8 @@ test("language preferences support regions, weights, exclusions, and Spanish fal
   assert.equal(language("de"), "es");
   assert.equal(language(undefined), "es");
 });
+test("rejects calculated amounts that cannot round-trip through the JSON number contract", () => {
+  assert.throws(() => calculatePrice("999999999999.99", "12345678.123456789"), {
+    code: "amountOutOfRange",
+  });
+});

@@ -1,9 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-} from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter } from "@nestjs/common";
 import type { Request, Response } from "express";
 export const dictionary = {
   bookNotFound: { es: "Libro no encontrado.", en: "Book not found." },
@@ -23,6 +18,10 @@ export const dictionary = {
   exchangeRateUnavailable: {
     es: "No hay una tasa de cambio disponible.",
     en: "No exchange rate is available.",
+  },
+  amountOutOfRange: {
+    es: "El monto calculado excede la precisión admitida.",
+    en: "The calculated amount exceeds supported precision.",
   },
   internalError: {
     es: "Ocurrió un error interno.",
@@ -69,7 +68,16 @@ export class ErrorFilter implements ExceptionFilter {
     const res = host.switchToHttp().getResponse<Response>();
     const dbCode = (error as { driverError?: { code?: string } })?.driverError
       ?.code;
-    const status = error instanceof HttpException ? error.getStatus() : 500;
+    // Framework exceptions can cross ESM/CJS boundaries; use their public status contract.
+    const httpError = error as { getStatus?: () => number } | null;
+    const reportedStatus =
+      typeof httpError?.getStatus === "function" ? httpError.getStatus() : 500;
+    const status =
+      Number.isInteger(reportedStatus) &&
+      reportedStatus >= 400 &&
+      reportedStatus <= 599
+        ? reportedStatus
+        : 500;
     const e =
       error instanceof ApiError
         ? error
@@ -95,6 +103,16 @@ export class ErrorFilter implements ExceptionFilter {
       status: e.status,
       path: req.path,
       details,
+      ...(error instanceof Error && !(error instanceof ApiError)
+        ? {
+            exception: error.name,
+            databaseCode: dbCode,
+            frames: error.stack
+              ?.split("\n")
+              .filter((line) => /^\s+at /.test(line))
+              .slice(0, 8),
+          }
+        : {}),
     });
     res.status(e.status).json({
       error: {

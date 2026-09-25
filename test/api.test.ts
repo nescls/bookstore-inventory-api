@@ -413,3 +413,28 @@ test("simultaneous edits preserve unrelated fields and leave a consistent price"
   assert.equal(saved.cost_usd, 20);
   assert.equal(saved.selling_price_local, 23.8);
 });
+test("oversized calculated amounts fail without changing the cost or price", async () => {
+  const book = (
+    await request(app.getHttpServer()).post("/books").send(sample).expect(201)
+  ).body;
+  providerBody = { base: "USD", rates: { VES: 12345678.123456789 } };
+  const failed = await request(app.getHttpServer())
+    .put(`/books/${book.id}`)
+    .send({ cost_usd: 999999999999.99 })
+    .expect(400);
+  assert.equal(failed.body.error.code, "amountOutOfRange");
+  assert.deepEqual(
+    (await request(app.getHttpServer()).get(`/books/${book.id}`)).body,
+    book,
+  );
+});
+test("malformed JSON uses the localized error envelope", async () => {
+  const failed = await request(app.getHttpServer())
+    .post("/books")
+    .set("Content-Type", "application/json")
+    .set("Accept-Language", "en")
+    .send("{broken")
+    .expect(400);
+  assert.equal(failed.body.error.code, "invalidInput");
+  assert.equal(failed.body.message, "Invalid input.");
+});

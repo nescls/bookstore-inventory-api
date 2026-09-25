@@ -93,7 +93,10 @@ and supplier country is an ISO alpha-2 code. Strings are trimmed. Stock is an in
 0–2147483647. Cost is positive, at most 999999999999.99, with at most two decimals.
 PostgreSQL stores cost as numeric(14,2), calculated price as numeric(24,2), and rates
 as numeric(20,10). Accepted rates are positive, at most 100000000, with at most ten
-decimal places. JSON amounts are numbers; arithmetic uses decimal.js.
+decimal places. JSON amounts are numbers; arithmetic uses decimal.js at 50-digit
+precision. Calculated amounts must preserve their decimal value when serialized and
+fit within the safe integer range in cents; otherwise return 400 `amountOutOfRange`
+and leave the book unchanged. Values are never silently rounded to fit JSON limits.
 
 New books have a null calculated price. The API controls IDs, timestamps,
 `selling_price_local`, `isActive` (true), and `deletedBy` (null). Empty edits, unknown

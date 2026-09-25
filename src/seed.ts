@@ -44,7 +44,12 @@ export async function seed(
             "No initial exchange rate available. Supply a valid SEED_EXCHANGE_RATE for offline seeding.",
           );
       }
-      await rates.insert({ base: "USD", quote: "VES", rate: String(rate) });
+      await rates.insert({
+        base: "USD",
+        quote: "VES",
+        rate: String(rate),
+        created_at: new Date(),
+      });
     }
     const books = manager.getRepository(BookEntity);
     for (const example of examples) {
