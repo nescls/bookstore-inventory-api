@@ -2,7 +2,7 @@
 
 Nextep technical assessment: a REST API for book inventory and exchange-rate-based selling prices.
 
-Status: repository and project skills initialized. Requirements interview pending; application implementation has not started.
+Status: requirements interview complete; [specification #1](https://github.com/nescls/bookstore-inventory-api/issues/1) published. Ticket breakdown and application implementation have not started.
 
 ## Agreed direction
 
@@ -22,6 +22,6 @@ Agent configuration lives in `AGENTS.md` and `docs/agents/`.
 
 ## Requirements
 
-See `docs/project-brief.md` for assessment requirements, user additions, and unresolved decisions.
+See [specification #1](https://github.com/nescls/bookstore-inventory-api/issues/1) for the implementation contract, `docs/project-brief.md` for the interview record, and `CONTEXT.md` for domain terms.
 This is a setup repository, not yet a runnable API. Installation, API examples,
 Docker instructions, and the public deployment URL will be documented as implemented.
