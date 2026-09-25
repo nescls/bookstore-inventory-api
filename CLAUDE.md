@@ -8,7 +8,8 @@ Domain terms: `CONTEXT.md`. Spec and tickets: `docs/README.md`. Setup and API de
 
 ```sh
 npm run dev           # watch mode (needs DATABASE_URL)
-npm run typecheck && npm run lint && npm test && npm run build
+npm run typecheck && npm run lint && npm run lint:code && npm test && npm run build
+npm run format        # Prettier write (npm run lint is the Prettier check the CI runs)
 npm run db:migrate    # also runs automatically when the Docker image starts
 npm run db:seed       # insert-only sample books + initial USD→EUR rate
 docker compose --profile test up -d --wait test-db   # tests need this (port 55433, bookstore_test)
@@ -48,6 +49,6 @@ selling_price_local, currency, calculation_timestamp`.
 ## Gotchas
 
 - `typescript-eslint` and `@nestjs/swagger` do not support TypeScript 7 (npm peer conflict), so
-  linting is Biome (`npm run lint`, Prettier still formats) and the OpenAPI document is built from Zod.
+  code linting is Biome (`npm run lint:code`; `npm run lint` is the Prettier check used in CI) and the OpenAPI document is built from Zod.
 - `nestjs-pino` keeps one root logger per process; test logging in a child process.
-- Format with Prettier (`npx prettier --write src scripts test`).
+- Format with Prettier (`npm run format`).
