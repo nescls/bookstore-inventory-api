@@ -13,6 +13,7 @@ Book fields: id, title, author, isbn, cost_usd, selling_price_local (nullable),
 stock_quantity, category, supplier_country, created_at, updated_at.
 
 Required endpoints:
+
 - POST /books
 - GET /books (pagination optional)
 - GET /books/{id}
@@ -21,6 +22,7 @@ Required endpoints:
 - POST /books/{id}/calculate-price
 
 Optional endpoints:
+
 - GET /books/search?category={category}
 - GET /books/low-stock?threshold=10
 
@@ -126,7 +128,6 @@ and logging service selection are deliberately deferred until deployment.
 - Private GitHub repository: nescls/bookstore-inventory-api.
 - Specs and tickets live in GitHub Issues.
 - Framework: NestJS (not Next.js).
-- Agent instructions: AGENTS.md, with the reviewed GitHub Issues and domain-doc configuration.
 
 ## Deferred
 

@@ -245,8 +245,6 @@ and rate storage so the one-update and rollback guarantees stay intact.
 The build emits `dist/src/` and `dist/scripts/`; Docker and npm commands use these
 paths. Existing migration names and database tables are unchanged.
 
-## Agent workflow
+## Documentation
 
-Use project-local Matt Pocock skills through `AGENTS.md`:
-`grill-with-docs → to-spec → to-tickets → implement`. Skills are pinned in
-`docs/skills-source.json`; domain terms live in `CONTEXT.md`.
+The specification, tickets and implementation review are in [`docs/`](docs/README.md); domain terms live in `CONTEXT.md`.
