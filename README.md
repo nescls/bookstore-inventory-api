@@ -121,6 +121,14 @@ An omitted or numerically equal cost skips calculation. A failed calculation lea
 all book fields unchanged. Row locking serializes competing edits/calculations on a
 book. Updating an exchange-rate record does not reprice other books.
 
+## API documentation
+
+Interactive Swagger UI is public at `/docs` (for example `http://localhost:3000/docs`),
+and the raw OpenAPI 3.1 document at `/docs-json`. Request and response schemas are generated
+from the same Zod schemas that validate requests (`dto/books.schemas.ts`,
+`dto/books.responses.ts`), and a test checks real responses against them. `@nestjs/swagger`
+is not used because it does not support TypeScript 7.
+
 ## Errors and logging
 
 Use `Accept-Language: es`, `es-VE`, `en`, or `en-US`; language preferences are honored,
@@ -202,6 +210,7 @@ src/
       books.service.ts           Queries, transactions, updates and persistence
       books.routes.ts            Route paths (mounted under /books)
       dto/books.schemas.ts       Zod request schemas
+      dto/books.responses.ts     Zod response schemas (docs and tests)
       entities/book.entity.ts    Book persistence model
       utils/                     Pure functions: isbn.ts, serialize-book.ts
     exchange-rates/
@@ -218,6 +227,7 @@ src/
     filters/error.filter.ts      Global exception filter
     logging/                     pino setup: local file or Google Cloud Logging
     utils/                       parse, resolve-language
+  docs/                          OpenAPI document builder and Swagger UI setup
   database/
     database.module.ts           Shared connection and shutdown lifecycle
     data-source.ts               TypeORM configuration

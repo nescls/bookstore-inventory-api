@@ -16,6 +16,12 @@ const provider = createServer((_req, res) => {
 });
 import { seed } from "../scripts/seed";
 import { createApp } from "../src/app";
+import {
+  bookPageResponseSchema,
+  bookResponseSchema,
+  errorResponseSchema,
+  priceCalculationResponseSchema,
+} from "../src/modules/books/dto/books.responses";
 import { createDatabase } from "../src/database/data-source";
 const dataSource = createDatabase(
   process.env.TEST_DATABASE_URL ??
@@ -455,4 +461,73 @@ test("malformed JSON uses the localized error envelope", async () => {
     .expect(400);
   assert.equal(failed.body.error.code, "invalidInput");
   assert.equal(failed.body.message, "Invalid input.");
+});
+
+test("Swagger UI and the OpenAPI document are public and list every endpoint", async () => {
+  const ui = await request(app.getHttpServer()).get("/docs/").expect(200);
+  assert.match(ui.text, /swagger-ui/);
+  const { body: document } = await request(app.getHttpServer())
+    .get("/docs-json")
+    .expect(200);
+  assert.equal(document.openapi, "3.1.0");
+  const documented = Object.entries(document.paths).flatMap(([path, methods]) =>
+    Object.keys(methods as object).map((method) => `${method} ${path}`),
+  );
+  assert.deepEqual(documented.sort(), [
+    "delete /books/{id}",
+    "get /books",
+    "get /books/low-stock",
+    "get /books/search",
+    "get /books/{id}",
+    "post /books",
+    "post /books/{id}/calculate-price",
+    "put /books/{id}",
+  ]);
+  assert.equal(
+    document.components.schemas.BookInput.additionalProperties,
+    false,
+  );
+  assert.ok(document.components.schemas.BookInput.required.includes("isbn"));
+});
+
+test("real responses match the documented response schemas", async () => {
+  const created = await request(app.getHttpServer())
+    .post("/books")
+    .send(sample)
+    .expect(201);
+  bookResponseSchema.parse(created.body);
+  const id = created.body.id;
+  bookResponseSchema.parse(
+    (await request(app.getHttpServer()).get(`/books/${id}`).expect(200)).body,
+  );
+  bookResponseSchema.parse(
+    (
+      await request(app.getHttpServer())
+        .put(`/books/${id}`)
+        .send({ stock_quantity: 3 })
+        .expect(200)
+    ).body,
+  );
+  for (const url of [
+    "/books",
+    "/books/search?category=Literatura",
+    "/books/low-stock",
+  ])
+    bookPageResponseSchema.parse(
+      (await request(app.getHttpServer()).get(url).expect(200)).body,
+    );
+  priceCalculationResponseSchema.parse(
+    (
+      await request(app.getHttpServer())
+        .post(`/books/${id}/calculate-price`)
+        .expect(200)
+    ).body,
+  );
+  errorResponseSchema.parse(
+    (await request(app.getHttpServer()).get("/books/999999").expect(404)).body,
+  );
+  errorResponseSchema.parse(
+    (await request(app.getHttpServer()).post("/books").send({}).expect(400))
+      .body,
+  );
 });
