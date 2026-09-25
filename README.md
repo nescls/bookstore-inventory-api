@@ -43,15 +43,16 @@ node --env-file=.env --import tsx src/main.ts
 Alternatively export the variables and use `npm run db:migrate`, `npm run db:seed`,
 and `npm run dev`. Build with `npm run build`; run the compiled API with `npm start`.
 
-| Variable                 | Purpose                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------- |
-| DATABASE_URL             | Required PostgreSQL connection URL; use provider-required TLS in deployment              |
-| PORT                     | HTTP port, default 3000                                                                  |
-| NODE_ENV                 | `production` suppresses response diagnostic details                                      |
-| EXCHANGE_RATE_URL        | Default `https://api.exchangerate-api.com/v4/latest/USD`; trusted operator configuration |
-| EXCHANGE_RATE_TIMEOUT_MS | Integer 1–30000, default 5000                                                            |
-| SEED_EXCHANGE_RATE       | Optional positive rate for offline seed initialization only                              |
-| TEST_DATABASE_URL        | Separate disposable database; name must end in `_test`                                   |
+| Variable                 | Purpose                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| DATABASE_URL             | Required PostgreSQL connection URL; use provider-required TLS in deployment                 |
+| PORT                     | HTTP port, default 3000                                                                     |
+| NODE_ENV                 | `production` suppresses response diagnostic details                                         |
+| EXCHANGE_RATE_URL        | Default `https://api.exchangerate-api.com/v4/latest/USD`; trusted operator configuration    |
+| EXCHANGE_RATE_TIMEOUT_MS | Integer 1–30000, default 5000                                                               |
+| SEED_EXCHANGE_RATE       | Optional positive rate for offline seed initialization only                                 |
+| SEED_ON_START            | Set to `true` to run the insert-only seed after migrations on container start (default off) |
+| TEST_DATABASE_URL        | Separate disposable database; name must end in `_test`                                      |
 
 ## API
 
@@ -155,14 +156,43 @@ Never point TEST_DATABASE_URL at real data. HTTP tests control a local rate-prov
 server, and focused tests cover pricing and language. No live exchange API is required.
 
 Import `postman/bookstore.postman_collection.json` into Postman and select the local
-environment. Run the collection in order: it creates and deletes its own example.
-The production environment is a template until a real public deployment is configured.
+or production environment (`baseUrl` is a variable). Run the collection in order: it
+creates and deletes its own example. The production environment targets the public
+deployment below.
+
+## Deployment
+
+The API is deployed on Google Cloud: **https://bookstore-inventory-api-154220862638.us-east1.run.app**
+
+| Piece    | Service                                                        |
+| -------- | -------------------------------------------------------------- |
+| API      | Cloud Run (`us-east1`), built from the `Dockerfile`            |
+| Database | Cloud SQL for PostgreSQL 16 (`db-f1-micro`), managed, not free |
+| Secret   | `DATABASE_URL` held in Secret Manager and injected at runtime  |
+
+The container applies migrations on start. With `SEED_ON_START=true` it also runs the
+insert-only seed, so the sample books and initial USD-to-VES rate exist without a manual
+command. The seed never overwrites records. Cloud SQL is reached through the Cloud Run
+Cloud SQL connection (Unix socket), so `DATABASE_URL` uses
+`postgresql://USER:PASSWORD@/DB?host=/cloudsql/PROJECT:REGION:INSTANCE`.
+
+Deploy or redeploy from the repository root (requires an authenticated `gcloud`):
+
+```sh
+gcloud run deploy bookstore-inventory-api --source . --region us-east1 \
+  --allow-unauthenticated --max-instances 1 \
+  --add-cloudsql-instances PROJECT:us-east1:INSTANCE \
+  --set-secrets DATABASE_URL=database-url:latest \
+  --set-env-vars NODE_ENV=production,SEED_ON_START=true,EXCHANGE_RATE_TIMEOUT_MS=5000
+```
+
+`--max-instances 1` avoids concurrent startup migrations. Cloud Run scales to zero, so
+the first request after idle time can take a few seconds.
 
 ## Delivery status and deferred work
 
-Public deployment has not happened. Free hosting and managed PostgreSQL will be
-selected with the owner at the final ticket; the production URL and Postman environment
-must be updated and tested before final delivery. No provider is selected yet.
+The earlier free-hosting constraint was relaxed by the owner: Cloud SQL has no free tier.
+Logging and retention remain undecided; Cloud Run's built-in Cloud Logging is available.
 
 TODOs: token validation, roles/permissions, functional soft deletion with real actor
 attribution, and a morning exchange-rate cron with an agreed time/timezone and scheduler.
