@@ -1,7 +1,7 @@
 # Bookstore Inventory API
 
 Nextep assessment API built with TypeScript, NestJS, TypeORM, PostgreSQL, and Zod.
-It manages one inventory per ISBN and calculates suggested selling prices in VES.
+It manages one inventory per ISBN and calculates suggested selling prices in EUR.
 [Specification](https://github.com/nescls/bookstore-inventory-api/issues/1) · [Tickets](https://github.com/nescls/bookstore-inventory-api/issues)
 
 ## Run with Docker
@@ -11,7 +11,7 @@ The credentials below are local development defaults only.
 
 ```sh
 docker compose up --build -d --wait
-# Seed fetches a real USD-to-VES rate. If offline, pass an explicit positive rate:
+# Seed fetches a real USD-to-EUR rate. If offline, pass an explicit positive rate:
 docker compose exec api node dist/scripts/seed.js
 # docker compose exec -e SEED_EXCHANGE_RATE=<your-rate> api node dist/scripts/seed.js
 curl http://localhost:3000/books
@@ -86,8 +86,9 @@ curl -X PUT http://localhost:3000/books/1 -H 'Content-Type: application/json' -d
 curl -X DELETE http://localhost:3000/books/1
 ```
 
-ISBN-10/13 check digits are validated, separators are removed, and ISBN-10 converts
-to canonical ISBN-13 before uniqueness checks. Validation does not verify publication
+ISBN-10/13 check digits are validated. The ISBN is stored and returned exactly as
+submitted (trimmed); an internal canonical ISBN-13 (separators removed, ISBN-10
+converted) enforces uniqueness. Validation does not verify publication
 registry assignment. Titles are 1–300 characters, authors 1–200, categories 1–100,
 and supplier country is an ISO alpha-2 code. Strings are trimmed. Stock is an integer
 0–2147483647. Cost is positive, at most 999999999999.99, with at most two decimals.
@@ -105,13 +106,13 @@ An equivalent ISBN also returns 400. Omitted editable fields remain unchanged.
 
 ## Pricing
 
-Calculate local cost as USD cost × USD-to-VES rate, round half-up to two decimals,
+Calculate local cost as USD cost × USD-to-EUR rate, round half-up to two decimals,
 add a 40% **markup on cost**, then round half-up again. The PDF's arithmetic example
 15.99 × 0.85 yields local cost 13.59 and price 19.03. The rate 0.85 is an example,
-not a claim about VES.
+not a claim about EUR.
 
 Each calculation tries the provider and records successful rates. Provider failure,
-timeout, or invalid data selects the latest created stored USD-to-VES rate, with no
+timeout, or invalid data selects the latest created stored USD-to-EUR rate, with no
 age cutoff. The public response includes the numerical rate but no source indicator.
 When neither live nor stored data is usable, return 503 `exchangeRateUnavailable`.
 
@@ -146,6 +147,7 @@ retention, Grafana, or host-specific logging will be chosen at deployment time.
 npm ci
 docker compose --profile test up -d --wait test-db
 npm run typecheck
+npm run lint
 npm test
 npm run build
 ```
@@ -172,35 +174,36 @@ There is no frontend, branch inventory, bulk repricing, or exchange-rate admin A
 
 ```text
 src/
-  app.module.ts                  Root Nest module
-  app.ts                         Application factory / global error filter
   main.ts                        Bootstrap
+  app.ts                         Application factory / global error filter
+  app.module.ts                  Root Nest module
   router.ts                      Central feature-module router
-  books/
-    books.module.ts              Books module wiring
-    books.controller.ts          HTTP input, validation, service calls
-    books.service.ts             Queries, transactions, edits and persistence
-    books.routes.ts              Route paths (mounted under /books)
-    model/
-      books.schemas.ts           Zod inputs and ISBN normalization
-      book.entity.ts             Book persistence model
-    book.presenter.ts            Public response mapping
-  exchange-rates/
-    exchange-rates.module.ts     Rate module wiring
-    exchange-rates.service.ts    Provider retrieval and stored fallback
-    exchange-rate.entity.ts      Exchange-rate persistence model
-    exchange-rate.validation.ts  Numerical rate validation
-  pricing/
-    pricing.module.ts            Pricing module wiring
-    pricing.service.ts           Rate resolution and calculation orchestration
-    price-calculation.ts         Decimal price arithmetic
+  modules/
+    books/
+      books.module.ts            Books module wiring
+      books.controller.ts        HTTP input, validation, service calls
+      books.service.ts           Queries, transactions, updates and persistence
+      books.routes.ts            Route paths (mounted under /books)
+      dto/books.schemas.ts       Zod request schemas
+      entities/book.entity.ts    Book persistence model
+      utils/                     Pure functions: isbn.ts, serialize-book.ts
+    exchange-rates/
+      exchange-rates.module.ts   Rate module wiring
+      exchange-rates.service.ts  Provider retrieval and stored fallback
+      entities/                  Exchange-rate persistence model
+      utils/is-valid-rate.ts     Numerical rate validation
+    pricing/
+      pricing.module.ts          Pricing module wiring
+      pricing.service.ts         Rate resolution and calculation orchestration
+      utils/calculate-price.ts   Decimal price arithmetic
+  common/
+    errors/                      ApiError and localized error messages
+    filters/error.filter.ts      Global exception filter
+    utils/                       parse, resolve-language, log-event
   database/
     database.module.ts           Shared connection and shutdown lifecycle
     data-source.ts               TypeORM configuration
     migrations/                  Versioned schema migrations
-  common/
-    errors.ts                    Dictionary, language selection, filter and logs
-    validation.ts                Shared Zod parsing and error mapping
 scripts/
   seed.ts                        Insert-only sample-data command
   migrate.ts                     Migration command
@@ -209,7 +212,7 @@ scripts/
 The central router mounts `BooksModule`; controller decorators use the feature's
 route definitions. Controllers handle HTTP concerns; services own persistence and
 business behavior. `BooksService` injects `PricingService`, which uses the exported
-`ExchangeRatesService`. The edit transaction's manager is passed through pricing
+`ExchangeRatesService`. The update transaction's manager is passed through pricing
 and rate storage so the one-update and rollback guarantees stay intact.
 The build emits `dist/src/` and `dist/scripts/`; Docker and npm commands use these
 paths. Existing migration names and database tables are unchanged.

@@ -14,26 +14,27 @@ The number of copies held for a book in the inventory.
 The book's acquisition cost expressed in US dollars.
 
 **Local currency**:
-The Venezuelan bolívar, identified by the currency code VES.
+The euro, identified by the currency code EUR.
 
 **Exchange rate**:
-The number of Venezuelan bolívares corresponding to one US dollar.
+The number of euros corresponding to one US dollar.
 
 **Local cost**:
-The USD cost converted into VES and rounded to two decimal places.
+The USD cost converted into EUR and rounded to two decimal places.
 
 **Markup**:
 The percentage added to local cost to obtain the suggested selling price; 40% for this assessment.
 _Avoid_: Profit margin on revenue.
 
 **Suggested selling price**:
-The local cost plus the markup, expressed in VES and rounded to two decimal places.
+The local cost plus the markup, expressed in EUR and rounded to two decimal places.
 The saved value is refreshed by an explicit price calculation or an actual change in USD cost.
 
 **Stored exchange rate**:
-A recorded USD-to-VES exchange rate. The most recently created record supplies the
+A recorded USD-to-EUR exchange rate. The most recently created record supplies the
 fallback value when the external provider cannot supply a valid rate.
 
 **Canonical ISBN**:
-The validated 13-digit identifier used to identify a book edition uniquely;
-equivalent legacy ISBN-10 input identifies the same edition.
+The internal validated 13-digit identifier used to identify a book edition uniquely;
+equivalent legacy ISBN-10 input identifies the same edition. The API stores and
+returns the ISBN exactly as submitted.

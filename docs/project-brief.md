@@ -57,20 +57,20 @@ TypeScript stack takes precedence.
 
 - API only; include category search, low-stock lookup, and pagination.
 - One inventory record per ISBN with one stock quantity; no bookstore branches.
-- Local currency is VES.
+- Local currency is EUR.
 - Use decimal arithmetic: round converted cost to two decimals, apply 40% markup
   on that rounded cost, and round selling price to two decimals.
 - Persist exchange rates in their own model. Do not expose fallback provenance
   to API clients. Try the external provider for each calculation and persist successful rates.
-  On provider failure use the most recently created stored USD-to-VES rate.
+  On provider failure use the most recently created stored USD-to-EUR rate.
   Return the numerical exchange_rate, but no indication of whether it was live or stored.
   Use the latest stored rate regardless of age. Add a seed function with example
-  books and an initial USD-to-VES exchange rate. Seed inserts missing records only: existing books and rates remain unchanged.
+  books and an initial USD-to-EUR exchange rate. Seed inserts missing records only: existing books and rates remain unchanged.
   Obtain the initial rate from the provider, with an explicitly supplied seed value
   for offline use; fail clearly when neither is available. If no usable live or stored
   rate exists at runtime, use the agreed exchangeRateUnavailable error.
 - When live rate retrieval fails, validate availability while looking up the latest
-  stored USD-to-VES rate. If no rate exists, raise a dictionary-backed error that
+  stored USD-to-EUR rate. If no rate exists, raise a dictionary-backed error that
   clearly states no exchange rate is available. Reject a dependent book edit before
   persistence, leaving all of its stored fields unchanged. Apply the same lookup
   validation to explicit price calculation. Confirmed contract: HTTP 503, code
@@ -79,8 +79,8 @@ TypeScript stack takes precedence.
 - TODO: morning cron job establishing the day's exchange rate; scheduling is deferred.
 - Accept-Language selects Spanish or English, including regional variants;
   unsupported/missing language defaults to Spanish. Codes and field names stay stable.
-- Validate ISBN checksums, accept separator characters, convert valid ISBN-10 to
-  canonical ISBN-13, and enforce uniqueness on the canonical value.
+- Validate ISBN checksums, accept separator characters, store and return the ISBN as
+  submitted (trimmed), and enforce uniqueness on an internal canonical ISBN-13 value.
   References: https://www.isbn-international.org/content/isbn-calculator and
   https://www.isbn-international.org/index.php/node/10
 - Permanent deletion is enabled. Add isActive (default true) and nullable deletedBy
