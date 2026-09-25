@@ -19,7 +19,7 @@ import {
   listSchema,
   searchSchema,
   lowStockSchema,
-} from "./books.schemas";
+} from "./model/books.schemas";
 import { parse } from "../common/validation";
 @Controller()
 export class BooksController {

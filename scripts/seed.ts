@@ -1,10 +1,10 @@
 import { DataSource } from "typeorm";
-import { BookEntity } from "../src/books/book.entity";
+import { BookEntity } from "../src/books/model/book.entity";
 import { createDatabase } from "../src/database/data-source";
 import { ExchangeRateEntity } from "../src/exchange-rates/exchange-rate.entity";
 import { ExchangeRatesService } from "../src/exchange-rates/exchange-rates.service";
 import { validRate } from "../src/exchange-rates/exchange-rate.validation";
-import { createBookSchema } from "../src/books/books.schemas";
+import { createBookSchema } from "../src/books/model/books.schemas";
 import { parse } from "../src/common/validation";
 const examples = [
   {

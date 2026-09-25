@@ -181,8 +181,9 @@ src/
     books.controller.ts          HTTP input, validation, service calls
     books.service.ts             Queries, transactions, edits and persistence
     books.routes.ts              Route paths (mounted under /books)
-    books.schemas.ts             Zod inputs and ISBN normalization
-    book.entity.ts               Book persistence model
+    model/
+      books.schemas.ts           Zod inputs and ISBN normalization
+      book.entity.ts             Book persistence model
     book.presenter.ts            Public response mapping
   exchange-rates/
     exchange-rates.module.ts     Rate module wiring

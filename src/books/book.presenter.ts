@@ -1,4 +1,4 @@
-import { Book } from "./book.entity";
+import { Book } from "./model/book.entity";
 export function publicBook(b: Book) {
   return {
     ...b,

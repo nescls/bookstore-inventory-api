@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource, FindOptionsWhere, ILike, LessThan } from "typeorm";
 import Decimal from "decimal.js";
-import { Book, BookEntity } from "./book.entity";
+import { Book, BookEntity } from "./model/book.entity";
 import { publicBook } from "./book.presenter";
-import { CreateBookInput, UpdateBookInput } from "./books.schemas";
+import { CreateBookInput, UpdateBookInput } from "./model/books.schemas";
 import { PricingService } from "../pricing/pricing.service";
 import { ApiError } from "../common/errors";
 export interface BookFilters {

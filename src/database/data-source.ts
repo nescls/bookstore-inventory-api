@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { BookEntity } from "../books/book.entity";
+import { BookEntity } from "../books/model/book.entity";
 import { ExchangeRateEntity } from "../exchange-rates/exchange-rate.entity";
 import { InitialBooks1790294400000 } from "./migrations/1790294400000-initial-books";
 import { ExchangeRates1790294400001 } from "./migrations/1790294400001-exchange-rates";
