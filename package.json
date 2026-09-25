@@ -7,14 +7,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "prettier --check src test scripts package.json tsconfig.json tsconfig.build.json",
     "format": "prettier --write src test scripts package.json tsconfig.json tsconfig.build.json",
-    "lint:code": "biome lint src scripts test",
-    "lint:code:fix": "biome lint --write src scripts test",
     "start": "node dist/src/main.js",
     "dev": "tsx watch src/main.ts",
     "test": "tsx --test --test-concurrency=1 test/*.test.ts",
     "test:integration": "tsx --test test/api.test.ts",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "lint:code": "biome lint src scripts test",
+    "lint:code:fix": "biome lint --write src scripts test"
   },
   "engines": {
     "node": ">=24 <25"
